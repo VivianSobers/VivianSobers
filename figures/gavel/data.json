@@ -1,0 +1,70 @@
+{
+  "source": {
+    "repo": "https://github.com/VivianSobers/gavel",
+    "commit": "6917fd702c48d01c5fcd1853659becde960154a6",
+    "paths": [
+      "test/gavel/auction/server_bid_test.exs",
+      "test/gavel/auction/server_duplicate_test.exs",
+      "rules/src/gavel_rules/auction.gleam",
+      "lib/gavel/auction/server.ex",
+      "lib/gavel/store.ex",
+      "lib/gavel/rules.ex",
+      "priv/repo/migrations/20261012203933_create_auctions_and_events.exs"
+    ]
+  },
+  "config": {
+    "basis": "illustrative source test fixtures, not a recorded run",
+    "amount_unit": "cents",
+    "auction_title": "Vintage Watch",
+    "sequence_fence": "(auction_id, seq)",
+    "request_fence": "(auction_id, request_id)"
+  },
+  "requests": [
+    {
+      "request_id": "req-bad",
+      "bidder": "bob",
+      "amount": 500,
+      "minimum": 1000,
+      "outcome": "rejected"
+    },
+    {
+      "request_id": "req-1",
+      "bidder": "bob",
+      "amount": 1000,
+      "outcome": "accepted",
+      "seq": 2
+    },
+    {
+      "request_id": "req-2",
+      "bidder": "carol",
+      "amount": 1100,
+      "outcome": "accepted",
+      "seq": 3
+    },
+    {
+      "request_id": "req-1",
+      "bidder": "bob",
+      "amount": 1000,
+      "outcome": "duplicate",
+      "original_seq": 2
+    }
+  ],
+  "events": [
+    {
+      "seq": 1,
+      "type": "opened"
+    },
+    {
+      "seq": 2,
+      "type": "bid_accepted",
+      "amount": 1000,
+      "request_id": "req-1"
+    },
+    {
+      "seq": 3,
+      "type": "bid_accepted",
+      "amount": 1100,
+      "request_id": "req-2"
+    }
+  ]
+}
