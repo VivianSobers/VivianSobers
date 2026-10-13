@@ -1,0 +1,345 @@
+{
+  "source": {
+    "repo": "https://github.com/VivianSobers/gpunap",
+    "commit": "331a395d0a85539b63990111c869a45d15f6cd1f",
+    "paths": [
+      "README.md",
+      "validation/results_gpu1/amp_tf_ballast12_p5.json",
+      "validation/results_gpu1/amp_tf_expandable_p20.json",
+      "validation/results_gpu1/amp_tf_p1_s0.json",
+      "validation/results_gpu1/amp_tf_p20_s0.json",
+      "validation/results_gpu1/amp_tf_p20_s1.json",
+      "validation/results_gpu1/cnn_p1_s0.json",
+      "validation/results_gpu1/cnn_p20_s0.json",
+      "validation/results_gpu1/compile_p1_s0.json",
+      "validation/results_gpu1/compile_p20_s0.json",
+      "validation/results_gpu1/cudagraph_p1_s0.json",
+      "validation/results_gpu1/cudagraph_p20_s0.json",
+      "validation/results_gpu1/hf_p10_s0.json",
+      "validation/results_gpu1/hf_p1_s0.json",
+      "validation/results_gpu1/loader_p1_s0.json",
+      "validation/results_gpu1/loader_p20_s0.json",
+      "validation/results_gpu1/mlp_expandable_p20.json",
+      "validation/results_gpu1/mlp_mallocasync_p20.json",
+      "validation/results_gpu1/mlp_p1_s0.json",
+      "validation/results_gpu1/mlp_p20_s0.json",
+      "validation/results_gpu1/mlp_p20_s1.json",
+      "validation/results_gpu1/nccl1_conda_p5.json",
+      "validation/results_gpu1/nccl1_cumem0_p20.json",
+      "validation/results_gpu1/nccl1_p20_s0.json",
+      "validation/results_gpu1/nccl1_p5_s1.json",
+      "validation/results_gpu1/paged_p1.json",
+      "validation/results_gpu1/smoke_mlp.json",
+      "validation/results_gpu1/threads_p1_s0.json",
+      "validation/results_gpu1/threads_p20_s0.json",
+      "validation/results_gpu2/amp_tf_p20_s0.json",
+      "validation/results_gpu2/cnn_p20_s0.json",
+      "validation/results_gpu2/compile_p20_s0.json",
+      "validation/results_gpu2/cudagraph_p20_s0.json",
+      "validation/results_gpu2/loader_p20_s0.json",
+      "validation/results_gpu2/mlp_expandable_p20.json",
+      "validation/results_gpu2/mlp_p20_s0.json",
+      "validation/results_gpu2/nccl1_conda_p5.json",
+      "validation/results_gpu2/nccl1_p5.json",
+      "validation/results_gpu2/threads_p20_s0.json",
+      "validation/summarize.py"
+    ]
+  },
+  "config": {
+    "workload_types": {
+      "mlp": "MLP",
+      "amp_tf": "transformer with fp16 autocast and gradient accumulation",
+      "cnn": "CNN with cuDNN",
+      "compile": "torch.compile",
+      "cudagraph": "CUDA graph replay",
+      "loader": "DataLoader with worker processes",
+      "threads": "two threads on separate streams",
+      "hf": "Qwen3-1.7B generation",
+      "nccl1": "single-GPU NCCL"
+    },
+    "grouping_rule": "Group by config.kind, ignoring seed, allocator, ballast, pause count and tag variants.",
+    "completion_rule": {
+      "pause_state": "checkpointed",
+      "resume_state": "running",
+      "event_error": "falsy"
+    },
+    "identity_rule": [
+      "rows_identical_to_ref",
+      "end_identical_to_ref"
+    ],
+    "minimum_completed_cycles": 1,
+    "skip_file_prefixes": [
+      "fault_",
+      "backtrace_sync_"
+    ],
+    "skip_file_contains": [
+      "bench_size"
+    ],
+    "skip_file_names": [
+      "bw.json",
+      "pcie_link.json",
+      "sysinfo.json"
+    ],
+    "skip_top_level_error": true
+  },
+  "rows": [
+    {
+      "tag": "amp_tf_ballast12_p5",
+      "gpu": "gpu1",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 5,
+      "bit_identical": true
+    },
+    {
+      "tag": "amp_tf_expandable_p20",
+      "gpu": "gpu1",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "amp_tf_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "amp_tf_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "amp_tf_p20_s1",
+      "gpu": "gpu1",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "cnn_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "CNN with cuDNN",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "cnn_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "CNN with cuDNN",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "compile_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "torch.compile",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "compile_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "torch.compile",
+      "completed_cycles": 19,
+      "bit_identical": true
+    },
+    {
+      "tag": "cudagraph_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "CUDA graph replay",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "cudagraph_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "CUDA graph replay",
+      "completed_cycles": 18,
+      "bit_identical": true
+    },
+    {
+      "tag": "hf_p10_s0",
+      "gpu": "gpu1",
+      "workload_type": "Qwen3-1.7B generation",
+      "completed_cycles": 10,
+      "bit_identical": true
+    },
+    {
+      "tag": "hf_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "Qwen3-1.7B generation",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "loader_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "DataLoader with worker processes",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "loader_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "DataLoader with worker processes",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_expandable_p20",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_mallocasync_p20",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 15,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 18,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_p20_s1",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 13,
+      "bit_identical": true
+    },
+    {
+      "tag": "smoke_mlp",
+      "gpu": "gpu1",
+      "workload_type": "MLP",
+      "completed_cycles": 2,
+      "bit_identical": true
+    },
+    {
+      "tag": "threads_p1_s0",
+      "gpu": "gpu1",
+      "workload_type": "two threads on separate streams",
+      "completed_cycles": 1,
+      "bit_identical": true
+    },
+    {
+      "tag": "threads_p20_s0",
+      "gpu": "gpu1",
+      "workload_type": "two threads on separate streams",
+      "completed_cycles": 9,
+      "bit_identical": true
+    },
+    {
+      "tag": "amp_tf_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "transformer with fp16 autocast and gradient accumulation",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "cnn_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "CNN with cuDNN",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "compile_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "torch.compile",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "cudagraph_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "CUDA graph replay",
+      "completed_cycles": 6,
+      "bit_identical": true
+    },
+    {
+      "tag": "loader_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "DataLoader with worker processes",
+      "completed_cycles": 20,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_expandable_p20",
+      "gpu": "gpu2",
+      "workload_type": "MLP",
+      "completed_cycles": 19,
+      "bit_identical": true
+    },
+    {
+      "tag": "mlp_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "MLP",
+      "completed_cycles": 18,
+      "bit_identical": true
+    },
+    {
+      "tag": "nccl1_conda_p5",
+      "gpu": "gpu2",
+      "workload_type": "single-GPU NCCL",
+      "completed_cycles": 5,
+      "bit_identical": true
+    },
+    {
+      "tag": "nccl1_p5",
+      "gpu": "gpu2",
+      "workload_type": "single-GPU NCCL",
+      "completed_cycles": 5,
+      "bit_identical": true
+    },
+    {
+      "tag": "threads_p20_s0",
+      "gpu": "gpu2",
+      "workload_type": "two threads on separate streams",
+      "completed_cycles": 18,
+      "bit_identical": true
+    }
+  ],
+  "excluded": [
+    {
+      "tag": "nccl1_conda_p5",
+      "gpu": "gpu1",
+      "kind": "nccl1"
+    },
+    {
+      "tag": "nccl1_cumem0_p20",
+      "gpu": "gpu1",
+      "kind": "nccl1"
+    },
+    {
+      "tag": "nccl1_p20_s0",
+      "gpu": "gpu1",
+      "kind": "nccl1"
+    },
+    {
+      "tag": "nccl1_p5_s1",
+      "gpu": "gpu1",
+      "kind": "nccl1"
+    },
+    {
+      "tag": "paged_p1",
+      "gpu": "gpu1",
+      "kind": "paged"
+    }
+  ]
+}
