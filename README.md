@@ -95,6 +95,23 @@ Per-machine models of Linux power consumption, used to estimate which applicatio
 
 **Languages I work with:** Go, Python, Rust, TypeScript, C, Elixir and Gleam.  
 **Problems I keep coming back to:** recovery, reproducibility, observability, and understanding what a model actually computes.
+
+<details>
+<summary>How the figures were made</summary>
+
+Each figure is an SVG drawn by a small Python script from a `data.json` snapshot in [`figures/`](figures). An `extract.py` next to each snapshot rebuilds it from a checkout of the source repository and records that repository's commit. `make figures` redraws every SVG and `make test` checks the snapshots against the published numbers.
+
+| Figure | Drawn from |
+|:--|:--|
+| drillbook | `.drillbook/results.jsonl` from the full run on 2026-10-08, described in [docs/v0.1-drill-results.md](https://github.com/VivianSobers/drillbook/blob/main/docs/v0.1-drill-results.md) |
+| swipeline | the Compose file, the gateway relay, the Flink jobs, the Druid supervisor and the Spark worker; a diagram with no measured values |
+| gavel | the bid and duplicate-request tests in [gavel](https://github.com/VivianSobers/gavel) at `6917fd7`; illustrative fixtures, not a recorded run |
+| qk-attribution | `experiments/results/003-qk-form-qwen3-0.6b.json` at `7ce957d`: one prompt, seed 0, every head |
+| gpunap | the 38 correctness results in `validation/results_gpu1` and `results_gpu2` at `331a395`, counted with the rules in `validation/summarize.py` |
+| Differentiable Rasterizer | a fresh fit by `figures/raster/record.sh`: `fit docs/target.png --tris 150 --iters 800 --seed 0` at `46aa10a`, pinned to one core |
+
+</details>
+
 <!-- header:start -->
 <details>
 <summary>How the header was made</summary>
