@@ -24,8 +24,8 @@ class Geometry:
     width: float = 1280
     left: float = 320
     right: float = 1060
-    top: float = 94
-    row_gap: float = 14
+    top: float = 104
+    row_gap: float = 22
     cell: float = 10
     gap: float = 2
     run_gap: float = 6
@@ -80,8 +80,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         "threads": "Threads on separate streams",
     }
     face, out = faces(), Outliner()
-    heading = out.run(face["title"], title, 40, 44, 22)
-    muted = out.run(face["body"], subtitle, 40, 70, 15)
+    heading = out.run(face["title"], title, 40, 44, 26)
+    muted = out.run(face["body"], subtitle, 40, 76, 18)
     workloads, descriptions, positioned = [], [], []
     y = geometry.top
     for kind, name, runs in groups:
@@ -120,20 +120,20 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         else:
             keys += "100%{opacity:1}"
         css.append(f"@keyframes count{count}{{{keys}}}")
-        glyphs = out.run(face["number"], str(count), 1160, 44, 20, "end")
+        glyphs = out.run(face["number"], str(count), 1160, 44, 17, "end")
         counters.append(
             f'<g class="counter" data-count="{count}" opacity="{int(count == total)}" '
             f'style="animation:count{count} {loop}s steps(1,end) infinite;{clock}">{glyphs}</g>'
         )
     counter = (
         f'<g fill="{INK[mode]}" style="{sweep}">{"".join(counters)}'
-        f'{out.run(face["body"], "resumed", 1240, 44, 15, "end")}</g>'
+        f'{out.run(face["body"], "resumed", 1240, 44, 16, "end")}</g>'
     )
     for kind, name, runs, placed, row_y in positioned:
         count = sum(run["completed_cycles"] for run in runs)
         summary = f"{count} cycles, {len(runs)} runs"
-        labels = out.run(face["number"], short.get(kind, name), 40, row_y + geometry.cell, 13)
-        labels += out.run(face["number"], summary, 1240, row_y + geometry.cell, 13, "end")
+        labels = out.run(face["number"], short.get(kind, name), 40, row_y + geometry.cell, 16)
+        labels += out.run(face["number"], summary, 1240, row_y + geometry.cell, 16, "end")
         marks = []
         for run, x, cell_y in placed:
             cells = []
@@ -154,9 +154,9 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             f'<g fill="{MUTED[mode]}">{labels}</g>{"".join(marks)}</g>'
         )
         descriptions.append(f"{name}: {summary}")
-    note_y = y + 13
+    note_y = y + 16
     height = note_y + 20
-    muted += out.run(face["body"], note, 40, note_y, 13)
+    muted += out.run(face["body"], note, 40, note_y, 16)
     body = (
         f'<g fill="{INK[mode]}">{heading}</g><g fill="{MUTED[mode]}">{muted}</g>'
         f'{"".join(workloads)}{counter}'

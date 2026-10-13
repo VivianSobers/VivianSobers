@@ -40,7 +40,7 @@ def test_cells_are_square_in_bounds_and_never_overlap():
         x, y, w, h = (float(cell.get(key)) for key in ("x", "y", "width", "height"))
         assert 10 <= w == h <= 12
         assert 320 <= x and x + w <= 1060
-        assert 94 <= y and y + h <= float(svg.get("height")) - 49
+        assert 104 <= y and y + h <= float(svg.get("height")) - 49
         boxes.append((x, y, x + w, y + h))
     for index, a in enumerate(boxes):
         for b in boxes[index + 1:]:
@@ -70,7 +70,7 @@ def test_adjacent_cycles_have_two_pixel_gaps_and_runs_have_six():
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_static_final_state_and_accessible_description(mode):
     svg, _ = drawing(mode)
-    assert svg.get("viewBox") == "0 0 1280 385"
+    assert svg.get("viewBox") == "0 0 1280 470"
     assert svg.find("s:title", NS).text == "388 pauses into host RAM, 388 bit-exact resumes"
     desc = svg.find("s:desc", NS).text
     assert "33 runs of 9 workload types" in desc
@@ -137,10 +137,10 @@ def test_canvas_and_following_rows_grow_when_another_workload_wraps():
     svg, _ = drawing(data=data)
     workloads = svg.findall(".//s:g[@class='workload']", NS)
     first_lines = [min(float(cell.get("y")) for cell in row.findall(".//s:rect", NS)) for row in workloads]
-    assert first_lines == [94, 132, 170, 208, 234, 260, 286, 312, 338]
-    assert svg.get("viewBox") == "0 0 1280 397"
+    assert first_lines == [104, 150, 196, 242, 276, 310, 344, 378, 412]
+    assert svg.get("viewBox") == "0 0 1280 482"
     note = svg.findall("s:g", NS)[1].findall("s:use", NS)[-1]
-    assert float(note.get("transform").split(")")[0].split()[-1]) == 377
+    assert float(note.get("transform").split(")")[0].split()[-1]) == 462
 
 
 def frames(css, name):
@@ -219,3 +219,41 @@ def test_every_animation_freezes_on_the_same_clock_and_loop_fades_seamlessly():
     scene = frames(css, "sweep")
     assert scene[0][1] == scene[-1][1] == {"opacity": "0"}
     assert any(props == {"opacity": "1"} for _, props in scene)
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_readme_text_has_legible_sizes_and_clear_grid_columns(mode, monkeypatch):
+    from figures.gpunap import build
+    calls = []
+    original = build.Outliner.run
+
+    def record(self, face, text, x, y, size, anchor="start"):
+        calls.append((face, text, x, y, size, anchor))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(build.Outliner, "run", record)
+    svg, _ = drawing(mode)
+    title, subtitle = calls[:2]
+    assert title[4] == 26
+    assert subtitle[4] == 18
+    assert all(size >= 16 for _, _, _, _, size, _ in calls)
+    assert all(16 <= size <= 17 for _, _, _, _, size, _ in calls[2:])
+    height = float(svg.get("height"))
+    for face, text, x, y, size, anchor in calls:
+        width = face.advance(text, size)
+        left = x - width if anchor == "end" else x
+        assert 40 <= left and left + width <= 1240
+        assert size <= y <= height - 20
+    for workload in svg.findall(".//s:g[@class='workload']", NS):
+        cells = workload.findall(".//s:rect[@class='cycle']", NS)
+        first_y = min(float(cell.get("y")) for cell in cells)
+        labels = [call for call in calls if call[3] == first_y + 10]
+        assert len(labels) == 2
+        label, summary = labels
+        assert label[2] + label[0].advance(label[1], label[4]) <= 308
+        assert summary[2] - summary[0].advance(summary[1], summary[4]) >= max(
+            float(cell.get("x")) + float(cell.get("width")) for cell in cells
+        ) + 12
+    number = calls[2]
+    resumed = next(call for call in calls if call[1] == "resumed")
+    assert number[2] + 12 <= resumed[2] - resumed[0].advance(resumed[1], resumed[4])
