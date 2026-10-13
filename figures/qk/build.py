@@ -112,6 +112,10 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             f'<line class="median" x1="{x:.2f}" y1="{y + 6}" x2="{x:.2f}" y2="{geometry.bottom}" stroke="{color}" stroke-width="1"/>'
             f'<g fill="{color}">{label_ink}</g>'
         )
+    traces = "".join(
+        f'<circle class="trace {form}" cx="{log_x(row[form], geometry):.2f}" cy="{ys[row["layer"]]:.2f}" r="2.5" opacity="0.3" fill="{EMBER[mode]}"/>'
+        for form in ("plain", "no_rope") for row in rows
+    )
     dots = "".join(
         f'<circle class="head" cx="{log_x(row["exact"], geometry):.2f}" cy="{ys[row["layer"]]:.2f}" r="3.5" opacity="0.85" fill="{BLUE[mode]}"/>'
         for row in rows
@@ -120,11 +124,12 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<g stroke="{FAINT[mode]}" stroke-width="1" opacity="0.6">{"".join(grid)}</g>'
         f'<g stroke="{MUTED[mode]}" stroke-width="1" stroke-linecap="round">'
         f'<line x1="{geometry.left}" y1="{geometry.bottom}" x2="{geometry.right}" y2="{geometry.bottom}"/>{"".join(ticks)}</g>'
-        f'{"".join(markers)}{dots}<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g>'
+        f'{"".join(markers)}{traces}{dots}<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g>'
     )
     return document(
         geometry.width, geometry.height, title,
         f"{subtitle}. Each blue dot is one head at its exact-form relative error; layer {layers[0]} is at the top. "
+        "Faint orange dots mark the earlier plain-product and rotary-left-out forms. "
         f"Vertical markers compare all three medians: {'; '.join(values)}.",
         "", out.defs(), body, freeze_at,
     )

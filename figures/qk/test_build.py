@@ -138,3 +138,29 @@ def test_plot_spacing_and_mark_visibility():
         baseline = float(uses[0].attrib["transform"].split(")")[0].split()[-1])
         assert baseline == geometry.bottom + 18
         assert geometry.height - baseline >= 14
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
+    build = builder()
+    from figkit.color import EMBER
+    snapshot = data()
+    root = ET.fromstring(build.render(snapshot, mode))
+    circles = root.findall('.//s:circle', NS)
+    heads = root.findall('.//s:circle[@class="head"]', NS)
+    for form in ("plain", "no_rope"):
+        traces = root.findall(f'.//s:circle[@class="trace {form}"]', NS)
+        assert len(traces) == len(snapshot["rows"])
+        for trace, head, row in zip(traces, heads, snapshot["rows"]):
+            assert float(trace.attrib["cx"]) == pytest.approx(build.log_x(row[form]), abs=0.01)
+            assert trace.attrib["cy"] == head.attrib["cy"]
+            assert trace.attrib["fill"] == EMBER[mode]
+            assert trace.attrib["r"] == "2.5"
+            assert trace.attrib["opacity"] == "0.3"
+            assert circles.index(trace) < circles.index(heads[0])
+
+
+def test_description_explains_earlier_form_traces():
+    root = ET.fromstring(builder().render(data(), "light"))
+    desc = root.find("s:desc", NS).text
+    assert "Faint orange dots mark the earlier plain-product and rotary-left-out forms." in desc
