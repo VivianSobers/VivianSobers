@@ -51,7 +51,15 @@ A clustered auction service with Gleam bidding rules and Elixir/OTP processes. E
 
 ## Experiments with evidence
 
-- **[qk-attribution](https://github.com/VivianSobers/qk-attribution)** — Decomposing attention scores into query/key feature interactions to investigate why a language model attends where it does. The corrected score form reproduces Qwen3-0.6B's attention scores to **2.5 × 10⁻⁷ median relative error across all 448 heads**. My [open circuit-tracer contribution](https://github.com/decoderesearch/circuit-tracer/pull/114) splits attribution edges across the heads that carried them.
+### [qk-attribution](https://github.com/VivianSobers/qk-attribution): why a model attends where it does
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/qk/qk-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/qk/qk-light.svg">
+  <img alt="All 448 attention heads of Qwen3-0.6B plotted by layer against relative error on a log axis from 10^-8 to 10^3. The plain query-key product has median error 1.2, leaving rotary embeddings out gives 0.099, and the exact form reproduces the model's scores to a median of 2.5 × 10^-7." src="figures/qk/qk-light.svg" width="100%">
+</picture>
+
+Decomposing attention scores into query and key feature interactions. The corrected score form reproduces Qwen3-0.6B's attention scores to a median relative error of 2.5 × 10⁻⁷ across all 448 heads. My [open circuit-tracer contribution](https://github.com/decoderesearch/circuit-tracer/pull/114) splits attribution edges across the heads that carried them.
 
 - **[gpunap](https://github.com/VivianSobers/gpunap)** — Testing whether CUDA jobs can pause into host RAM and resume intact. **388 completed pause/resume cycles across nine workload types**, with bit-for-bit agreement against uninterrupted runs. The repository includes an installable validation CLI and documents the driver hazards; the scheduler remains future work.
 
