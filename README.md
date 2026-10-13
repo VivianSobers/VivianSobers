@@ -37,9 +37,15 @@ Repeatable synthetic card traffic, durable authorization decisions and streaming
 
 <sub>Go · PostgreSQL · Kafka · Flink · Druid · Superset · Spark · Hudi</sub>
 
-### [gavel](https://github.com/VivianSobers/gavel) — Auctions on the BEAM
+### [gavel](https://github.com/VivianSobers/gavel): auctions on the BEAM
 
-A clustered auction service with Gleam bidding rules and Elixir/OTP processes. The work centers on ordered event histories, request deduplication, ownership changes, and rebuilding auction state from PostgreSQL. **In progress**, with a Phoenix LiveView interface planned.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/gavel/gavel-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/gavel/gavel-light.svg">
+  <img alt="Four bids from gavel's test fixtures reach one auction process. A 500-cent bid is rejected below the 1000-cent minimum, bids of 1000 and 1100 cents become events seq 2 and seq 3 after the opened event, and a retry of request req-1 gets its original outcome back without adding an event." src="figures/gavel/gavel-light.svg" width="100%">
+</picture>
+
+A clustered auction service with Gleam bidding rules and Elixir/OTP processes. Each auction is one ordered event log in PostgreSQL, fenced on (auction, seq), and a retried request gets its original outcome back. Ownership changes and rebuilding auctions from the log after a node stops are in progress, with a Phoenix LiveView interface planned.
 
 <sub>Elixir · Gleam · Erlang/OTP · PostgreSQL · Phoenix</sub>
 
