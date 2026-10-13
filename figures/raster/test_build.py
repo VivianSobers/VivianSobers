@@ -71,11 +71,11 @@ def test_scene_embeds_only_target_and_preserves_triangle_paint_order(mode):
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_loss_curve_includes_best_step_and_all_recorded_points(mode):
     build = builder()
-    from figkit.color import BLUE
+    from figkit.color import CATEGORICAL
     snapshot = data()
     root = ET.fromstring(build.render(snapshot, mode))
     curve = root.find('.//s:polyline[@class="loss"]', NS)
-    assert curve.attrib["stroke"] == BLUE[mode]
+    assert curve.attrib["stroke"] == CATEGORICAL["magenta"][mode]
     assert curve.attrib["stroke-width"] == "2.5"
     assert curve.attrib["fill"] == "none"
     box = build.Box(848, 180, 392, 226)
@@ -87,7 +87,7 @@ def test_loss_curve_includes_best_step_and_all_recorded_points(mode):
     dot = root.find('.//s:circle[@class="best"]', NS)
     assert (float(dot.attrib["cx"]), float(dot.attrib["cy"])) == pytest.approx(
         build.loss_point(snapshot["best_iter"], snapshot["best_loss"], snapshot, box), abs=0.001)
-    assert dot.attrib["fill"] == BLUE[mode]
+    assert dot.attrib["fill"] == CATEGORICAL["magenta"][mode]
     assert float(dot.attrib["r"]) >= 5
     desc = root.find("s:desc", NS).text
     assert f"loss fell {snapshot['first_loss'] / snapshot['best_loss']:.0f}× (best at step {snapshot['best_iter']})" in desc
@@ -197,3 +197,18 @@ def test_all_drawn_lines_scale_with_labels(mode):
         assert float(element.attrib["stroke-width"]) == 2.5
     borders = root.find('.//s:g[@fill="none"]', NS)
     assert float(borders.attrib["stroke-width"]) == 2.5
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+@pytest.mark.parametrize("freeze_at", [None, 2, 13])
+def test_loss_label_matches_magenta_marks_and_other_text_stays_neutral(mode, freeze_at):
+    from figkit.color import CATEGORICAL, INK, MUTED
+    root = ET.fromstring(builder().render(data(), mode, freeze_at=freeze_at))
+    heading, labels, ratio = root.findall("s:g", NS)[:3]
+    assert heading.attrib["fill"] == INK[mode]
+    assert labels.attrib["fill"] == MUTED[mode]
+    assert ratio.findall("s:use", NS)
+    assert ratio.attrib["fill"] == CATEGORICAL["magenta"][mode]
+    assert root.find('.//s:polyline[@class="loss"]', NS).attrib["stroke"] == ratio.attrib["fill"]
+    assert root.find('.//s:circle[@class="best"]', NS).attrib["fill"] == ratio.attrib["fill"]
+    assert "The magenta dot marks the best scene's step." in root.find("s:desc", NS).text

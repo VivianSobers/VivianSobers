@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, FAINT, INK, MUTED, linear_to_srgb_hex
+from figkit.color import CATEGORICAL, FAINT, INK, MUTED, linear_to_srgb_hex
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
@@ -153,7 +153,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     )
     body = (
         f'<g fill="{INK[mode]}">{heading}</g><g fill="{MUTED[mode]}">{labels}</g>'
-        f'<g fill="{BLUE[mode]}">{ratio_text}</g>'
+        f'<g fill="{CATEGORICAL["magenta"][mode]}">{ratio_text}</g>'
         f'<image {rect(target)} href="data:image/png;base64,{png}"/>'
         f'<g class="scene" clip-path="url(#scene-box)"><rect {rect(scene)} fill="{rgb(data["background"])}"/>'
         f'{"".join(triangles)}</g>'
@@ -161,9 +161,9 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<rect {rect(target)}/><rect {rect(scene)}/></g>'
         f'<g stroke-linecap="round">{"".join(grid)}'
         f'<g class="loss-motion" style="{delay(0, freeze_at)}">'
-        f'<polyline class="loss" points="{points}" fill="none" stroke="{BLUE[mode]}" stroke-width="2.5" '
+        f'<polyline class="loss" points="{points}" fill="none" stroke="{CATEGORICAL["magenta"][mode]}" stroke-width="2.5" '
         'clip-path="url(#loss-box)"/>'
-        f'<circle class="best" cx="{best_x:.3f}" cy="{best_y:.3f}" r="5" fill="{BLUE[mode]}" '
+        f'<circle class="best" cx="{best_x:.3f}" cy="{best_y:.3f}" r="5" fill="{CATEGORICAL["magenta"][mode]}" '
         f'style="{delay(0, freeze_at)}"/></g></g>'
     )
     return document(
@@ -172,7 +172,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f"Middle: {count} translucent triangles in paint order on the fitted background. "
         f"Right: recorded loss on a logarithmic scale; {ratio}. "
         f"First loss {data['first_loss']:.9g}, best loss {data['best_loss']:.9g}, last loss {data['last_loss']:.9g}. "
-        "The blue dot marks the best scene's step. Triangles appear in paint order over eight seconds "
+        "The magenta dot marks the best scene's step. Triangles appear in paint order over eight seconds "
         "as the loss curve is revealed; the complete scene holds for six seconds, then fades for one second. "
         "The assembly reveals the recorded best scene, rather than intermediate optimization scenes.",
         css, out.defs() + clip, body, freeze_at,
