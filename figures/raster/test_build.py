@@ -43,7 +43,7 @@ def test_scene_embeds_only_target_and_preserves_triangle_paint_order(mode):
     build = builder()
     snapshot = data()
     root = ET.fromstring(build.render(snapshot, mode))
-    assert root.attrib["viewBox"] == "0 0 1280 440"
+    assert root.attrib["viewBox"] == "0 0 1280 460"
     images = root.findall(".//s:image", NS)
     assert len(images) == 1
     prefix, encoded = images[0].attrib["href"].split(",", 1)
@@ -108,7 +108,7 @@ def test_titles_and_best_ratio_follow_supplied_data():
     assert "loss fell 25×" not in desc
 
 
-def test_static_renderer_is_self_contained_and_supports_frozen_previews():
+def test_renderer_is_self_contained_and_supports_frozen_previews():
     build = builder()
     for mode in ("light", "dark"):
         svg = build.render(data(), mode, freeze_at=2)
@@ -119,7 +119,8 @@ def test_static_renderer_is_self_contained_and_supports_frozen_previews():
         assert not root.findall(".//s:script", NS)
         assert not root.findall(".//s:foreignObject", NS)
         assert "https://" not in svg
-        assert "@keyframes" not in svg
+        assert "@keyframes draw-loss" in svg
+        assert "animation-delay:-2.000s" in svg
         assert "animation-play-state:paused!important" in svg
         assert "@media (prefers-reduced-motion:reduce){*{animation:none!important}}" in svg
 
