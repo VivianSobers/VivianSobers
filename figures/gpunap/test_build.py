@@ -39,7 +39,7 @@ def test_cells_are_square_in_bounds_and_never_overlap():
         x, y, w, h = (float(cell.get(key)) for key in ("x", "y", "width", "height"))
         assert 10 <= w == h <= 12
         assert 320 <= x and x + w <= 1060
-        assert 94 <= y and y + h <= 314
+        assert 94 <= y and y + h <= float(svg.get("height")) - 49
         boxes.append((x, y, x + w, y + h))
     for index, a in enumerate(boxes):
         for b in boxes[index + 1:]:
@@ -69,7 +69,7 @@ def test_adjacent_cycles_have_two_pixel_gaps_and_runs_have_six():
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_static_final_state_and_accessible_description(mode):
     svg, _ = drawing(mode)
-    assert svg.get("viewBox") == "0 0 1280 360"
+    assert svg.get("viewBox") == "0 0 1280 385"
     assert svg.find("s:title", NS).text == "388 pauses into host RAM, 388 bit-exact resumes"
     desc = svg.find("s:desc", NS).text
     assert "33 runs of 9 workload types" in desc
@@ -100,3 +100,40 @@ def test_freeze_preview_keeps_all_final_cells():
     svg, _ = drawing(freeze_at=2)
     assert "animation-play-state:paused!important" in svg.find("s:style", NS).text
     assert len(svg.findall(".//s:rect[@class='cycle']", NS)) == 388
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_workload_cell_boxes_have_at_least_twelve_pixels_between_rows(mode):
+    svg, _ = drawing(mode)
+    previous_bottom = None
+    for workload in svg.findall(".//s:g[@class='workload']", NS):
+        cells = workload.findall(".//s:rect[@class='cycle']", NS)
+        top = min(float(cell.get("y")) for cell in cells)
+        bottom = max(float(cell.get("y")) + float(cell.get("height")) for cell in cells)
+        if previous_bottom is not None:
+            assert top - previous_bottom >= 12, workload.get("data-workload")
+        previous_bottom = bottom
+
+
+def test_labels_follow_the_first_cell_line():
+    svg, _ = drawing()
+    for workload in svg.findall(".//s:g[@class='workload']", NS):
+        cells = workload.findall(".//s:rect[@class='cycle']", NS)
+        baseline = min(float(cell.get("y")) for cell in cells) + 10
+        labels = workload.find("s:g", NS).findall("s:use", NS)
+        assert labels
+        assert all(float(label.get("transform").split(")")[0].split()[-1]) == baseline for label in labels)
+
+
+def test_canvas_and_following_rows_grow_when_another_workload_wraps():
+    data = copy.deepcopy(json.loads((HERE / "data.json").read_text()))
+    for run in data["rows"]:
+        if run["workload_type"] == "CNN with cuDNN":
+            run["completed_cycles"] = 30
+    svg, _ = drawing(data=data)
+    workloads = svg.findall(".//s:g[@class='workload']", NS)
+    first_lines = [min(float(cell.get("y")) for cell in row.findall(".//s:rect", NS)) for row in workloads]
+    assert first_lines == [94, 132, 170, 208, 234, 260, 286, 312, 338]
+    assert svg.get("viewBox") == "0 0 1280 397"
+    note = svg.findall("s:g", NS)[1].findall("s:use", NS)[-1]
+    assert float(note.get("transform").split(")")[0].split()[-1]) == 377
