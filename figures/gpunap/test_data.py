@@ -47,7 +47,7 @@ def test_snapshot_groups_variants_into_nine_readme_workloads():
 def test_snapshot_preserves_identity_and_counts_only_completed_events():
     rows = snapshot()["rows"]
     assert all(row["bit_identical"] is True for row in rows)
-    assert all(set(row) == {"tag", "gpu", "workload_type", "completed_cycles", "bit_identical"} for row in rows)
+    assert all(set(row) == {"tag", "gpu", "workload_type", "completed_cycles", "bit_identical", "driver"} for row in rows)
     by_run = {(row["gpu"], row["tag"]): row for row in rows}
     assert by_run["gpu1", "compile_p20_s0"]["completed_cycles"] == 19
     assert by_run["gpu1", "mlp_mallocasync_p20"]["completed_cycles"] == 15
@@ -86,3 +86,8 @@ def test_runs_that_never_paused_are_kept_aside():
     assert len(data["excluded"]) == 5
     assert {run["gpu"] for run in data["excluded"]} == {"gpu1"}
     assert not {(run["gpu"], run["tag"]) for run in data["excluded"]} & {(run["gpu"], run["tag"]) for run in data["rows"]}
+
+
+def test_each_run_records_its_full_driver_version():
+    versions = {"gpu1": "595.84", "gpu2": "580.178.04"}
+    assert all(row["driver"] == versions[row["gpu"]] for row in snapshot()["rows"])

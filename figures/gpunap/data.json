@@ -86,6 +86,7 @@
     {
       "tag": "amp_tf_ballast12_p5",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 5,
       "bit_identical": true
@@ -93,6 +94,7 @@
     {
       "tag": "amp_tf_expandable_p20",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 20,
       "bit_identical": true
@@ -100,6 +102,7 @@
     {
       "tag": "amp_tf_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 1,
       "bit_identical": true
@@ -107,6 +110,7 @@
     {
       "tag": "amp_tf_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 20,
       "bit_identical": true
@@ -114,6 +118,7 @@
     {
       "tag": "amp_tf_p20_s1",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 20,
       "bit_identical": true
@@ -121,6 +126,7 @@
     {
       "tag": "cnn_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "CNN with cuDNN",
       "completed_cycles": 1,
       "bit_identical": true
@@ -128,6 +134,7 @@
     {
       "tag": "cnn_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "CNN with cuDNN",
       "completed_cycles": 20,
       "bit_identical": true
@@ -135,6 +142,7 @@
     {
       "tag": "compile_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "torch.compile",
       "completed_cycles": 1,
       "bit_identical": true
@@ -142,6 +150,7 @@
     {
       "tag": "compile_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "torch.compile",
       "completed_cycles": 19,
       "bit_identical": true
@@ -149,6 +158,7 @@
     {
       "tag": "cudagraph_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "CUDA graph replay",
       "completed_cycles": 1,
       "bit_identical": true
@@ -156,6 +166,7 @@
     {
       "tag": "cudagraph_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "CUDA graph replay",
       "completed_cycles": 18,
       "bit_identical": true
@@ -163,6 +174,7 @@
     {
       "tag": "hf_p10_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "Qwen3-1.7B generation",
       "completed_cycles": 10,
       "bit_identical": true
@@ -170,6 +182,7 @@
     {
       "tag": "hf_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "Qwen3-1.7B generation",
       "completed_cycles": 1,
       "bit_identical": true
@@ -177,6 +190,7 @@
     {
       "tag": "loader_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "DataLoader with worker processes",
       "completed_cycles": 1,
       "bit_identical": true
@@ -184,6 +198,7 @@
     {
       "tag": "loader_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "DataLoader with worker processes",
       "completed_cycles": 20,
       "bit_identical": true
@@ -191,6 +206,7 @@
     {
       "tag": "mlp_expandable_p20",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 20,
       "bit_identical": true
@@ -198,6 +214,7 @@
     {
       "tag": "mlp_mallocasync_p20",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 15,
       "bit_identical": true
@@ -205,6 +222,7 @@
     {
       "tag": "mlp_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 1,
       "bit_identical": true
@@ -212,6 +230,7 @@
     {
       "tag": "mlp_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 18,
       "bit_identical": true
@@ -219,6 +238,7 @@
     {
       "tag": "mlp_p20_s1",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 13,
       "bit_identical": true
@@ -226,6 +246,7 @@
     {
       "tag": "smoke_mlp",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "MLP",
       "completed_cycles": 2,
       "bit_identical": true
@@ -233,6 +254,7 @@
     {
       "tag": "threads_p1_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "two threads on separate streams",
       "completed_cycles": 1,
       "bit_identical": true
@@ -240,6 +262,7 @@
     {
       "tag": "threads_p20_s0",
       "gpu": "gpu1",
+      "driver": "595.84",
       "workload_type": "two threads on separate streams",
       "completed_cycles": 9,
       "bit_identical": true
@@ -247,6 +270,7 @@
     {
       "tag": "amp_tf_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "transformer with fp16 autocast and gradient accumulation",
       "completed_cycles": 20,
       "bit_identical": true
@@ -254,6 +278,7 @@
     {
       "tag": "cnn_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "CNN with cuDNN",
       "completed_cycles": 20,
       "bit_identical": true
@@ -261,6 +286,7 @@
     {
       "tag": "compile_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "torch.compile",
       "completed_cycles": 20,
       "bit_identical": true
@@ -268,6 +294,7 @@
     {
       "tag": "cudagraph_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "CUDA graph replay",
       "completed_cycles": 6,
       "bit_identical": true
@@ -275,6 +302,7 @@
     {
       "tag": "loader_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "DataLoader with worker processes",
       "completed_cycles": 20,
       "bit_identical": true
@@ -282,6 +310,7 @@
     {
       "tag": "mlp_expandable_p20",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "MLP",
       "completed_cycles": 19,
       "bit_identical": true
@@ -289,6 +318,7 @@
     {
       "tag": "mlp_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "MLP",
       "completed_cycles": 18,
       "bit_identical": true
@@ -296,6 +326,7 @@
     {
       "tag": "nccl1_conda_p5",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "single-GPU NCCL",
       "completed_cycles": 5,
       "bit_identical": true
@@ -303,6 +334,7 @@
     {
       "tag": "nccl1_p5",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "single-GPU NCCL",
       "completed_cycles": 5,
       "bit_identical": true
@@ -310,6 +342,7 @@
     {
       "tag": "threads_p20_s0",
       "gpu": "gpu2",
+      "driver": "580.178.04",
       "workload_type": "two threads on separate streams",
       "completed_cycles": 18,
       "bit_identical": true

@@ -56,6 +56,7 @@ def main() -> None:
                 continue
             rows.append({
                 "tag": run["tag"], "gpu": gpu,
+                "driver": run["driver"]["gpu"].split(",")[1].strip(),
                 "workload_type": WORKLOAD_TYPES[run["config"]["kind"]],
                 "completed_cycles": completed,
                 "bit_identical": run["rows_identical_to_ref"] and run["end_identical_to_ref"],

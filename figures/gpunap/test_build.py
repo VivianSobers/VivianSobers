@@ -70,15 +70,17 @@ def test_adjacent_cycles_have_two_pixel_gaps_and_runs_have_six():
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_static_final_state_and_accessible_description(mode):
     svg, _ = drawing(mode)
-    assert svg.get("viewBox") == "0 0 1280 470"
+    assert svg.get("viewBox") == "0 0 1280 494"
     assert svg.find("s:title", NS).text == "388 pauses into host RAM, 388 bit-exact resumes"
     desc = svg.find("s:desc", NS).text
     assert "33 runs of 9 workload types" in desc
     assert "106 cycles, 8 runs" in desc
     assert "5 runs on gpu1" in desc
     assert "4 single-GPU NCCL, 1 managed memory" in desc
-    blue = {"light": "#256abf", "dark": "#3987e5"}[mode]
-    assert all(cell.get("fill") == blue for cell in svg.findall(".//s:rect[@class='cycle']", NS))
+    from figkit.color import CATEGORICAL
+    for run in svg.findall(".//s:g[@class='run']", NS):
+        colour = CATEGORICAL["violet" if run.get("data-gpu") == "gpu1" else "aqua"][mode]
+        assert all(cell.get("fill") == colour for cell in run.findall("s:rect", NS))
     assert "@keyframes" in svg.find("s:style", NS).text
     counters = svg.findall(".//s:g[@class='counter']", NS)
     assert [int(group.get("data-count")) for group in counters if group.get("opacity") == "1"] == [388]
@@ -137,10 +139,10 @@ def test_canvas_and_following_rows_grow_when_another_workload_wraps():
     svg, _ = drawing(data=data)
     workloads = svg.findall(".//s:g[@class='workload']", NS)
     first_lines = [min(float(cell.get("y")) for cell in row.findall(".//s:rect", NS)) for row in workloads]
-    assert first_lines == [104, 150, 196, 242, 276, 310, 344, 378, 412]
-    assert svg.get("viewBox") == "0 0 1280 482"
+    assert first_lines == [128, 174, 220, 266, 300, 334, 368, 402, 436]
+    assert svg.get("viewBox") == "0 0 1280 506"
     note = svg.findall("s:g", NS)[1].findall("s:use", NS)[-1]
-    assert float(note.get("transform").split(")")[0].split()[-1]) == 462
+    assert float(note.get("transform").split(")")[0].split()[-1]) == 486
 
 
 def frames(css, name):
@@ -154,7 +156,8 @@ def test_cells_pause_for_point_four_seconds_in_a_left_to_right_sweep(mode):
     svg, _ = drawing(mode)
     css = svg.find("s:style", NS).text
     cells = svg.findall(".//s:rect[@class='cycle']", NS)
-    ember = {"light": "#d9622b", "dark": "#e0702f"}[mode]
+    from figkit.color import STATUS
+    warning = STATUS["warning"]
     events = []
     for cell in cells:
         name = re.search(r"animation:(\w+) ([\d.]+)s steps\(1,end\) infinite", cell.get("style", ""))
@@ -162,7 +165,7 @@ def test_cells_pause_for_point_four_seconds_in_a_left_to_right_sweep(mode):
         loop = float(name[2])
         assert 12 <= loop <= 20
         keys = frames(css, name[1])
-        paused = next(at for at, props in keys if props.get("fill") == ember)
+        paused = next(at for at, props in keys if props.get("fill") == warning)
         resumed = next(at for at, props in keys if at > paused and props.get("fill") == cell.get("fill"))
         assert (resumed - paused) * loop / 100 == pytest.approx(0.4, abs=0.00002)
         assert keys[0][1]["opacity"] == "0.18"
@@ -254,6 +257,45 @@ def test_readme_text_has_legible_sizes_and_clear_grid_columns(mode, monkeypatch)
         assert summary[2] - summary[0].advance(summary[1], summary[4]) >= max(
             float(cell.get("x")) + float(cell.get("width")) for cell in cells
         ) + 12
-    number = calls[2]
+    number = next(call for call in calls if call[1] == "0")
     resumed = next(call for call in calls if call[1] == "resumed")
     assert number[2] + 12 <= resumed[2] - resumed[0].advance(resumed[1], resumed[4])
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_machine_legend_and_pause_label_are_neutral_and_clear_of_cells(mode):
+    from figkit.color import CATEGORICAL, INK, MUTED, STATUS
+    svg, _ = drawing(mode)
+    legend = svg.find("s:g[@class='legend']", NS)
+    assert legend is not None
+    entries = legend.findall("s:g", NS)
+    assert [entry.get("aria-label") for entry in entries] == [
+        "gpu1, driver 595", "gpu2, driver 580", "paused",
+    ]
+    colours = [CATEGORICAL["violet"][mode], CATEGORICAL["aqua"][mode], STATUS["warning"]]
+    top = min(float(cell.get("y")) for cell in svg.findall(".//s:rect[@class='cycle']", NS))
+    for entry, colour in zip(entries, colours):
+        mark = entry.find("s:rect", NS)
+        assert mark.get("fill") == colour
+        assert float(mark.get("width")) == float(mark.get("height")) >= 10
+        assert 76 < float(mark.get("y")) < top - float(mark.get("height")) - 12
+        label = entry.find("s:g", NS)
+        assert label.get("fill") == MUTED[mode]
+        assert label.findall("s:use", NS)
+    for counter in svg.findall(".//s:g[@class='counter']", NS):
+        assert next(parent for parent in svg.iter() if counter in list(parent)).get("fill") == INK[mode]
+    desc = svg.find("s:desc", NS).text
+    assert "violet" in desc and "aqua" in desc and "yellow while paused" in desc
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_machine_legend_driver_labels_follow_changed_snapshot(mode):
+    data = copy.deepcopy(json.loads((HERE / "data.json").read_text()))
+    for run in data["rows"]:
+        if run["gpu"] == "gpu1":
+            run["driver"] = "601.2"
+    svg, _ = drawing(mode, data=data)
+    legend = svg.find("s:g[@class='legend']", NS)
+    assert legend is not None
+    assert legend.find("s:g", NS).get("aria-label") == "gpu1, driver 601"
+    assert "gpu1, driver 601" in svg.find("s:desc", NS).text

@@ -12,11 +12,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, EMBER, INK, MUTED
+from figkit.color import CATEGORICAL, STATUS, INK, MUTED
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
+MACHINE_HUES = {"gpu1": "violet", "gpu2": "aqua"}
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,7 @@ class Geometry:
     width: float = 1280
     left: float = 320
     right: float = 1060
-    top: float = 104
+    top: float = 128
     row_gap: float = 22
     cell: float = 10
     gap: float = 2
@@ -82,6 +83,24 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     face, out = faces(), Outliner()
     heading = out.run(face["title"], title, 40, 44, 26)
     muted = out.run(face["body"], subtitle, 40, 76, 18)
+    machines = dict.fromkeys(run["gpu"] for run in rows)
+    entries, machine_labels = [], []
+    for index, gpu in enumerate(machines):
+        versions = {run["driver"].split(".")[0] for run in rows if run["gpu"] == gpu}
+        label = f"{gpu}, driver {', '.join(sorted(versions))}"
+        machine_labels.append(label)
+        x = 40 + 240 * index
+        entries.append(
+            f'<g aria-label={quoteattr(label)}><rect x="{x}" y="90" width="10" height="10" '
+            f'fill="{CATEGORICAL[MACHINE_HUES[gpu]][mode]}"/>'
+            f'<g fill="{MUTED[mode]}">{out.run(face["body"], label, x + 18, 100, 16)}</g></g>'
+        )
+    x = 40 + 240 * len(machines)
+    entries.append(
+        f'<g aria-label="paused"><rect x="{x}" y="90" width="10" height="10" fill="{STATUS["warning"]}"/>'
+        f'<g fill="{MUTED[mode]}">{out.run(face["body"], "paused", x + 18, 100, 16)}</g></g>'
+    )
+    legend = f'<g class="legend">{"".join(entries)}</g>'
     workloads, descriptions, positioned = [], [], []
     y = geometry.top
     for kind, name, runs in groups:
@@ -89,25 +108,26 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         positioned.append((kind, name, runs, placed, y))
         y = max(cell_y for _, _, cell_y in placed) + geometry.cell + geometry.gap + geometry.row_gap
     positions = sorted(
-        (x + cycle * (geometry.cell + geometry.gap), cell_y)
+        (x + cycle * (geometry.cell + geometry.gap), cell_y, run["gpu"])
         for _, _, _, placed, _ in positioned for run, x, cell_y in placed
         for cycle in range(run["completed_cycles"])
     )
     loop = 17
     starts = [0.5 + 11.5 * index / max(total - 1, 1) for index in range(total)]
     resumes = [100 * (start + 0.4) / loop for start in starts]
-    ranks = {position: index for index, position in enumerate(positions)}
+    ranks = {(x, y): index for index, (x, y, _) in enumerate(positions)}
     clock = delay(0, freeze_at)
     sweep = f"animation:sweep {loop}s ease-in-out infinite;{clock}"
     css = [
         "@keyframes sweep{0%{opacity:0}2.94118%{opacity:1}94.11765%{opacity:1}100%{opacity:0}}"
     ]
     for index, start in enumerate(starts):
+        colour = CATEGORICAL[MACHINE_HUES[positions[index][2]]][mode]
         css.append(
-            f"@keyframes pause{index}{{0%{{fill:{BLUE[mode]};opacity:0.18}}"
-            f"{100 * start / loop:.5f}%{{fill:{EMBER[mode]};opacity:1}}"
-            f"{resumes[index]:.5f}%{{fill:{BLUE[mode]};opacity:1}}"
-            f"100%{{fill:{BLUE[mode]};opacity:1}}}}"
+            f"@keyframes pause{index}{{0%{{fill:{colour};opacity:0.18}}"
+            f"{100 * start / loop:.5f}%{{fill:{STATUS["warning"]};opacity:1}}"
+            f"{resumes[index]:.5f}%{{fill:{colour};opacity:1}}"
+            f"100%{{fill:{colour};opacity:1}}}}"
         )
     counters = []
     for count in range(total + 1):
@@ -136,13 +156,14 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         labels += out.run(face["number"], summary, 1240, row_y + geometry.cell, 16, "end")
         marks = []
         for run, x, cell_y in placed:
+            colour = CATEGORICAL[MACHINE_HUES[run["gpu"]]][mode]
             cells = []
             for cycle in range(run["completed_cycles"]):
                 cell_x = x + cycle * (geometry.cell + geometry.gap)
                 index = ranks[cell_x, cell_y]
                 cells.append(
                     f'<rect class="cycle" x="{cell_x:g}" y="{cell_y:g}" '
-                    f'width="{geometry.cell:g}" height="{geometry.cell:g}" fill="{BLUE[mode]}" '
+                    f'width="{geometry.cell:g}" height="{geometry.cell:g}" fill="{colour}" '
                     f'style="animation:pause{index} {loop}s steps(1,end) infinite;{clock}"/>'
                 )
             marks.append(
@@ -159,13 +180,14 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     muted += out.run(face["body"], note, 40, note_y, 16)
     body = (
         f'<g fill="{INK[mode]}">{heading}</g><g fill="{MUTED[mode]}">{muted}</g>'
-        f'{"".join(workloads)}{counter}'
+        f'{legend}{"".join(workloads)}{counter}'
     )
     return document(
         geometry.width, height, title,
-        f"{subtitle} One blue square per completed bit-exact pause/resume cycle; "
-        f"gaps separate runs. Cells sweep left to right, orange while paused for 0.4 seconds, "
-        f"then blue on resume; the counter counts completed resumes. {'; '.join(descriptions)}. {note}",
+        f"{subtitle} One square per completed bit-exact pause/resume cycle; "
+        f"violet for {machine_labels[0]}, aqua for {machine_labels[1]}. "
+        f"gaps separate runs. Cells sweep left to right, yellow while paused for 0.4 seconds, "
+        f"then its machine colour on resume; the counter counts completed resumes. {'; '.join(descriptions)}. {note}",
         "".join(css), out.defs(), body, freeze_at,
     )
 
