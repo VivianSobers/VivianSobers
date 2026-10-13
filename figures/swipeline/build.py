@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import FAINT, INK, MUTED
-from figkit.svg import document
+from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
+from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
@@ -228,23 +228,129 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
             f'fill="none" stroke-linecap="round" marker-end="url(#{marker_id})"/>'
         )
 
+    frozen = delay(0, freeze_at)
+
+    dots = []
+
+    # Transaction 1: Blue dots (r 4)
+    dots.append(
+        f'<circle class="transit-dot" cx="220" cy="150" r="4" fill="{BLUE[mode]}" style="animation:t1_seg1 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="500" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t1_seg2 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="700" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t1_seg3 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="760" cy="170" r="4" fill="{BLUE[mode]}" style="animation:t1_seg4 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="580" cy="170" r="4" fill="{BLUE[mode]}" style="animation:t1_seg5 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="settled-dot" cx="380" cy="308" r="4" fill="{BLUE[mode]}" style="animation:t1_settle 14s linear infinite;{frozen}"/>'
+    )
+
+    # Transaction 2: Blue dots + Fail-closed decision settling in PostgreSQL
+    dots.append(
+        f'<circle class="transit-dot" cx="220" cy="150" r="4" fill="{BLUE[mode]}" style="animation:t2_seg1 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="500" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t2_seg2 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="700" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t2_seg3 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="settled-dot" cx="365" cy="308" r="4" fill="{BLUE[mode]}" style="animation:t2_settle 14s linear infinite;{frozen}"/>'
+    )
+
+    # Transaction 2 late proposal: EMBER dots (r 4)
+    dots.append(
+        f'<circle class="transit-dot" cx="760" cy="170" r="4" fill="{EMBER[mode]}" style="animation:t2_prop_seg4 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="late-proposal-dot" cx="580" cy="170" r="4" fill="{EMBER[mode]}" style="animation:late_proposal_dot 14s linear infinite;{frozen}"/>'
+    )
+
+    # Continuous fainter dots on downstream paths
+    for i in range(4):
+        d_offset = delay(i * 0.875, freeze_at)
+        dots.append(
+            f'<circle class="faint-dot" cx="700" cy="266" r="3.5" fill="{BLUE[mode]}" style="animation:flow_dec_1 3.5s linear infinite;{d_offset}"/>'
+        )
+        dots.append(
+            f'<circle class="faint-dot" cx="1000" cy="268" r="3.5" fill="{BLUE[mode]}" style="animation:flow_dec_2 3.5s linear infinite;{d_offset}"/>'
+        )
+
+        l_offset = delay(i * 0.875 + 0.4375, freeze_at)
+        dots.append(
+            f'<circle class="faint-dot" cx="700" cy="355" r="3.5" fill="{BLUE[mode]}" style="animation:flow_life_1 3.5s linear infinite;{l_offset}"/>'
+        )
+        dots.append(
+            f'<circle class="faint-dot" cx="1000" cy="355" r="3.5" fill="{BLUE[mode]}" style="animation:flow_life_2 3.5s linear infinite;{l_offset}"/>'
+        )
+
+    # Late proposal refused label (EMBER)
+    late_label_glyphs = out.run(face["body"], "late proposal refused", 480, 192, 13, anchor="middle")
+    late_label_elem = (
+        f'<g class="late-proposal-label" fill="{EMBER[mode]}" style="animation:late_label 14s linear infinite;{frozen}">{late_label_glyphs}</g>'
+    )
+
+    css = (
+        ".transit-dot{opacity:0}"
+        ".settled-dot{opacity:1}"
+        ".late-proposal-dot{opacity:0;animation:late_proposal_dot 14s linear infinite}"
+        ".late-proposal-label{opacity:0;animation:late_label 14s linear infinite}"
+        ".faint-dot{opacity:0}"
+        ".t1-seg1{animation:t1_seg1 14s linear infinite}"
+        ".t1-seg2{animation:t1_seg2 14s linear infinite}"
+        ".t1-seg3{animation:t1_seg3 14s linear infinite}"
+        ".t1-seg4{animation:t1_seg4 14s linear infinite}"
+        ".t1-seg5{animation:t1_seg5 14s linear infinite}"
+        ".t2-seg1{animation:t2_seg1 14s linear infinite}"
+        ".t2-seg2{animation:t2_seg2 14s linear infinite}"
+        ".t2-seg3{animation:t2_seg3 14s linear infinite}"
+        ".t2-prop-seg4{animation:t2_prop_seg4 14s linear infinite}"
+        "@keyframes t1_seg1{0%{opacity:1;transform:translateX(0)}5.714%{opacity:1;transform:translateX(100px)}5.715%,100%{opacity:0;transform:translateX(100px)}}"
+        "@keyframes t1_seg2{0%,7.143%{opacity:0;transform:translateX(0)}7.144%{opacity:1;transform:translateX(0)}11.429%{opacity:1;transform:translateX(80px)}11.430%,100%{opacity:0;transform:translateX(80px)}}"
+        "@keyframes t1_seg3{0%,12.857%{opacity:0;transform:translateX(0)}12.858%{opacity:1;transform:translateX(0)}16.429%{opacity:1;transform:translateX(60px)}16.430%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes t1_seg4{0%,20.000%{opacity:0;transform:translateX(0)}20.001%{opacity:1;transform:translateX(0)}23.571%{opacity:1;transform:translateX(-60px)}23.572%,100%{opacity:0;transform:translateX(-60px)}}"
+        "@keyframes t1_seg5{0%,25.000%{opacity:0;transform:translateX(0)}25.001%{opacity:1;transform:translateX(0)}29.286%{opacity:1;transform:translateX(-80px)}29.287%,100%{opacity:0;transform:translateX(-80px)}}"
+        "@keyframes t1_settle{0%,30.714%{opacity:0;transform:translateY(-134px)}30.715%{opacity:1;transform:translateY(-134px)}37.143%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
+        "@keyframes t2_seg1{0%,40.000%{opacity:0;transform:translateX(0)}40.001%{opacity:1;transform:translateX(0)}45.714%{opacity:1;transform:translateX(100px)}45.715%,100%{opacity:0;transform:translateX(100px)}}"
+        "@keyframes t2_seg2{0%,47.143%{opacity:0;transform:translateX(0)}47.144%{opacity:1;transform:translateX(0)}51.429%{opacity:1;transform:translateX(80px)}51.430%,100%{opacity:0;transform:translateX(80px)}}"
+        "@keyframes t2_seg3{0%,52.857%{opacity:0;transform:translateX(0)}52.858%{opacity:1;transform:translateX(0)}56.429%{opacity:1;transform:translateX(60px)}56.430%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes t2_settle{0%,57.857%{opacity:0;transform:translateY(-134px)}57.858%{opacity:1;transform:translateY(-134px)}64.286%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
+        "@keyframes t2_prop_seg4{0%,60.714%{opacity:0;transform:translateX(0)}60.715%{opacity:1;transform:translateX(0)}64.286%{opacity:1;transform:translateX(-60px)}64.287%,100%{opacity:0;transform:translateX(-60px)}}"
+        "@keyframes late_proposal_dot{0%,65.714%{opacity:0;transform:translateX(0)}65.715%{opacity:1;transform:translateX(0)}70.000%{opacity:1;transform:translateX(-80px)}80.000%{opacity:1;transform:translateX(-80px)}84.286%{opacity:0;transform:translateX(-80px)}84.287%,100%{opacity:0;transform:translateX(-80px)}}"
+        "@keyframes late_label{0%,69.999%{opacity:0}70.000%{opacity:1}80.000%{opacity:1}84.286%{opacity:0}84.287%,100%{opacity:0}}"
+        "@keyframes flow_dec_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(160px)}37.144%,100%{opacity:0;transform:translateX(160px)}}"
+        "@keyframes flow_dec_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}62.857%{opacity:0.45;transform:translateX(70px)}62.858%,100%{opacity:0;transform:translateX(70px)}}"
+        "@keyframes flow_life_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(160px)}37.144%,100%{opacity:0;transform:translateX(160px)}}"
+        "@keyframes flow_life_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}60.000%{opacity:0.45;transform:translateX(60px)}60.001%,100%{opacity:0;transform:translateX(60px)}}"
+    )
+
     body = (
         f'<g fill="{INK[mode]}">{heading}</g>'
         f'<g fill="{MUTED[mode]}">{subline}</g>'
         f'<g class="edges">{"".join(edge_elements)}</g>'
+        f'<g class="dots">{"".join(dots)}</g>'
         f'<g class="nodes">{"".join(node_elements)}</g>'
         f'<g class="node-names" fill="{INK[mode]}">{bus_label}{"".join(node_names)}</g>'
         f'<g class="node-subtitles" fill="{MUTED[mode]}">{"".join(node_subtitles)}</g>'
         f'<g class="bus-topics" fill="{MUTED[mode]}">{"".join(bus_topics)}</g>'
+        f'{late_label_elem}'
     )
 
     desc = (
         f"{title}. {subtitle} "
-        "Card traffic flows from the replayer to the gateway and PostgreSQL. "
-        "The gateway relay publishes from PostgreSQL to Kafka topics auth.requests, decisions.raw, and lifecycle. "
-        "Flink scores auth.requests into auth.proposals consumed by the gateway. "
-        "Flink also canonicalizes decisions.raw into decisions for Druid and Superset. "
-        "Spark batch reads lifecycle to write Hudi ledger tables on SeaweedFS."
+        "In a 14 s loop, blue dots travel replayer to gateway, through Kafka auth.requests to Flink, "
+        "and return through Kafka auth.proposals to the gateway and PostgreSQL, where they settle. "
+        "Continuous fainter dots flow along decisions through Druid to Superset and lifecycle through Spark to Hudi on SeaweedFS. "
+        "Once per loop one scoring proposal is ember and arrives after its transaction's decision is stored: "
+        "it stops at the gateway with a late proposal refused label that fades after 2 s."
     )
 
     return document(
@@ -252,7 +358,7 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
         geometry.height,
         title,
         desc,
-        "",
+        css,
         defs,
         body,
         freeze_at=freeze_at,

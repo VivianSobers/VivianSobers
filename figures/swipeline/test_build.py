@@ -198,3 +198,71 @@ def test_render_edges_and_arrows(mode):
 def test_render_supports_freeze_at():
     svg_frozen = build.render({}, "light", freeze_at=2.0)
     assert "*{animation-play-state:paused!important}" in svg_frozen
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_animation_loop_and_keyframes(mode):
+    svg = build.render({}, mode)
+    root = ET.fromstring(svg)
+    style = root.find("s:style", NS).text
+    assert "14s" in style
+    assert "offset-path" not in style
+    assert "@keyframes" in style
+    assert "translate" in style
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_animated_dots_specification(mode):
+    from figkit.color import BLUE, EMBER
+    svg = build.render({}, mode)
+    root = ET.fromstring(svg)
+
+    # BLUE dots (r 4)
+    blue_dots = root.findall(f".//s:circle[@fill='{BLUE[mode]}']", NS)
+    assert len(blue_dots) >= 1
+    for d in blue_dots:
+        if d.attrib.get("class") == "faint-dot":
+            continue
+        assert float(d.attrib["r"]) == 4.0
+
+    # EMBER proposal dot (r 4)
+    ember_dots = root.findall(f".//s:circle[@fill='{EMBER[mode]}']", NS)
+    assert len(ember_dots) >= 1
+    assert any(float(d.attrib["r"]) == 4.0 for d in ember_dots)
+
+    # Continuous fainter dots
+    faint_dots = root.findall(".//s:circle[@class='faint-dot']", NS)
+    assert len(faint_dots) >= 2
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_late_proposal_refused_label(mode):
+    from figkit.color import EMBER
+    svg = build.render({}, mode)
+    root = ET.fromstring(svg)
+    label_group = root.find(".//s:g[@class='late-proposal-label']", NS)
+    assert label_group is not None
+    assert label_group.attrib["fill"] == EMBER[mode]
+
+
+def test_settled_dots_at_postgresql():
+    svg = build.render({}, "light")
+    root = ET.fromstring(svg)
+    settled = root.findall(".//s:circle[@class='settled-dot']", NS)
+    assert len(settled) >= 1
+    nodes = build.get_nodes()
+    pg = nodes["PostgreSQL"]
+    for dot in settled:
+        cx = float(dot.attrib["cx"])
+        cy = float(dot.attrib["cy"])
+        assert pg.x <= cx <= pg.x + pg.width
+        assert pg.y <= cy <= pg.y + pg.height
+
+
+def test_desc_includes_animation_details():
+    svg = build.render({}, "light")
+    root = ET.fromstring(svg)
+    desc = root.find("s:desc", NS).text
+    assert "14 s" in desc or "14s" in desc or "14-second" in desc
+    assert "late proposal" in desc
+
