@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
+from figkit.color import FAINT, INK, MUTED, STATUS
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
@@ -108,17 +108,17 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         cleared_anchor = "end" if cleared + face["number"].advance(cleared_label, 16) > geometry.right else "start"
         control = (
             f'<line class="control" clip-path="url(#clock-window)" x1="{fired:.2f}" x2="{geometry.right:g}" '
-            f'y1="{y + 12:g}" y2="{y + 12:g}" stroke="{EMBER[mode]}" '
+            f'y1="{y + 12:g}" y2="{y + 12:g}" stroke="{STATUS["critical"]}" '
             'stroke-width="2.5" stroke-dasharray="5 5"/>'
         ) if row["control_ran"] and not row["control_cleared"] else ""
         if index == 0 and control:
             control += (
-                f'<g class="control-label" fill="{EMBER[mode]}" style="animation:control-label {loop:g}s steps(1,end) infinite;{frozen}">'
+                f'<g class="control-label" fill="{STATUS["critical"]}" style="animation:control-label {loop:g}s steps(1,end) infinite;{frozen}">'
                 f'{out.run(face["body"], "control: still firing", geometry.right, y - 18, 16, "end")}</g>'
             )
             css += f"@keyframes control-label{{0%{{opacity:0}}{stop:.6f}%{{opacity:1}}100%{{opacity:1}}}}"
         fault_label = (
-            f'<g class="fault-label" fill="{EMBER[mode]}">'
+            f'<g class="fault-label" fill="{STATUS["serious"]}">'
             f'{out.run(face["body"], "fault", geometry.left, y - 44, 16)}</g>'
         ) if index == 0 else ""
         lanes.append(
@@ -127,16 +127,16 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             f'<line class="baseline" x1="{geometry.left:g}" x2="{geometry.right:g}" '
             f'y1="{y:g}" y2="{y:g}" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
             f'<line class="wait" clip-path="url(#clock-window)" x1="{geometry.left:g}" x2="{fired:.2f}" '
-            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2.5" opacity="0.35"/>'
+            f'y1="{y:g}" y2="{y:g}" stroke="{STATUS["warning"]}" stroke-width="2.5" opacity="0.35"/>'
             f'<line class="fault" x1="{geometry.left:g}" x2="{geometry.left:g}" '
-            f'y1="{y - 6:g}" y2="{y + 6:g}" stroke="{EMBER[mode]}" stroke-width="2.5"/>'
+            f'y1="{y - 6:g}" y2="{y + 6:g}" stroke="{STATUS["serious"]}" stroke-width="2.5"/>'
             f'{fault_label}'
             f'{control}<line class="firing" clip-path="url(#clock-window)" x1="{fired:.2f}" x2="{cleared:.2f}" '
-            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2.5"/>'
-            f'<circle class="fired" style="{styles["fired"]}" cx="{fired:.2f}" cy="{y:g}" r="5" fill="{EMBER[mode]}"/>'
-            f'<circle class="cleared" style="{styles["cleared"]}" cx="{cleared:.2f}" cy="{y:g}" r="5" fill="{BLUE[mode]}"/>'
-            f'<g class="fired-label" style="{styles["fired"]}" fill="{EMBER[mode]}">{out.run(face["number"], fired_label, fired, y - 18, 16, fired_anchor)}</g>'
-            f'<g class="cleared-label" style="{styles["cleared"]}" fill="{BLUE[mode]}">{out.run(face["number"], cleared_label, cleared, y + 36, 16, cleared_anchor)}</g></g>'
+            f'y1="{y:g}" y2="{y:g}" stroke="{STATUS["critical"]}" stroke-width="2.5"/>'
+            f'<circle class="fired" style="{styles["fired"]}" cx="{fired:.2f}" cy="{y:g}" r="5" fill="{STATUS["critical"]}"/>'
+            f'<circle class="cleared" style="{styles["cleared"]}" cx="{cleared:.2f}" cy="{y:g}" r="5" fill="{STATUS["good"]}"/>'
+            f'<g class="fired-label" style="{styles["fired"]}" fill="{STATUS["critical"]}">{out.run(face["number"], fired_label, fired, y - 18, 16, fired_anchor)}</g>'
+            f'<g class="cleared-label" style="{styles["cleared"]}" fill="{STATUS["good"]}">{out.run(face["number"], cleared_label, cleared, y + 36, 16, cleared_anchor)}</g></g>'
         )
         descriptions.append(f"{row['drill']} ({row['alert']}): {fired_label}, {cleared_label}")
     body = (
@@ -144,7 +144,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<g stroke-linecap="round">{"".join(ticks)}'
         f'<g class="clock-marks" style="{frozen}">{"".join(lanes)}'
         f'<line class="playhead" x1="{geometry.left:g}" x2="{geometry.left:g}" '
-        f'y1="{geometry.top - 20:g}" y2="{geometry.axis:g}" stroke="{MUTED[mode]}" '
+        f'y1="{geometry.top - 20:g}" y2="{geometry.axis:g}" stroke="{INK[mode]}" opacity="0.5" '
         f'stroke-width="2.5" style="{frozen}"/></g>'
         f'<line x1="{geometry.left:g}" x2="{geometry.right:g}" y1="{geometry.axis:g}" '
         f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="2.5"/></g>'
@@ -152,9 +152,9 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     return document(
         geometry.width, geometry.height, title,
         f"{subtitle} {'; '.join(descriptions)}. "
-        "Orange ticks mark fault injection; faint orange lines show the wait before firing. "
-        "Orange segments span firing to clearing; blue dots mark clearing. "
-        "Dashed orange lines show the control runs still firing.",
+        "Peach ticks mark fault injection; faint yellow lines show the wait before firing. "
+        "Red segments span firing to clearing; green dots mark clearing. "
+        "Dashed red lines show the control runs still firing.",
         css, out.defs() + clip, body, freeze_at,
     )
 

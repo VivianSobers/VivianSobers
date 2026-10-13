@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 from figures.drills import build
-from figkit.color import BLUE, EMBER, FAINT
+from figkit.color import FAINT, INK, MUTED, STATUS
 
 DATA = json.loads((Path(__file__).parent / "data.json").read_text())
 NS = {"s": "http://www.w3.org/2000/svg"}
@@ -45,12 +45,12 @@ def test_final_lanes_follow_recorded_times(mode):
         assert baseline.attrib["stroke"] == FAINT[mode]
         assert float(segment.attrib["x1"]) == pytest.approx(start, abs=0.01)
         assert float(segment.attrib["x2"]) == pytest.approx(end, abs=0.01)
-        assert segment.attrib["stroke"] == EMBER[mode]
+        assert segment.attrib["stroke"] == STATUS["critical"]
         assert float(control.attrib["x1"]) == pytest.approx(start, abs=0.01)
         assert float(control.attrib["x2"]) == build.Geometry().right
-        assert control.attrib["stroke"] == EMBER[mode]
+        assert control.attrib["stroke"] == STATUS["critical"]
         assert "stroke-dasharray" in control.attrib
-        for kind, x, color in (("fired", start, EMBER[mode]), ("cleared", end, BLUE[mode])):
+        for kind, x, color in (("fired", start, STATUS["critical"]), ("cleared", end, STATUS["good"])):
             dot = lane.find(f"s:circle[@class='{kind}']", NS)
             assert float(dot.attrib["cx"]) == pytest.approx(x, abs=0.01)
             assert float(dot.attrib["r"]) >= 5
@@ -108,7 +108,8 @@ def test_each_lane_shows_the_fault_and_wait_until_firing(mode):
         assert float(fault.attrib["x1"]) == float(fault.attrib["x2"]) == build.time_x(0)
         assert float(fault.attrib["y1"]) == y - 6
         assert float(fault.attrib["y2"]) == y + 6
-        assert fault.attrib["stroke"] == wait.attrib["stroke"] == EMBER[mode]
+        assert fault.attrib["stroke"] == STATUS["serious"]
+        assert wait.attrib["stroke"] == STATUS["warning"]
         assert float(fault.attrib["stroke-width"]) == float(wait.attrib["stroke-width"]) == 2.5
         assert float(wait.attrib["x1"]) == build.time_x(0)
         assert float(wait.attrib["x2"]) == pytest.approx(build.time_x(row["fired_after_s"] / 60), abs=0.01)
@@ -205,3 +206,22 @@ def test_marks_scale_with_the_larger_labels(mode):
         xs = [float(use.attrib["transform"].split("(")[1].split()[0])
               for use in labels.findall("s:use", NS)]
         assert max(xs) + 16 < build.Geometry().left - 20
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_status_labels_match_their_marks_and_playhead_is_neutral(mode):
+    root = ET.fromstring(build.render(DATA, mode, freeze_at=13))
+    for lane in root.findall(".//s:g[@class='lane']", NS):
+        assert lane.find("s:g", NS).attrib["fill"] == MUTED[mode]
+        for kind, role in (("fired", "critical"), ("cleared", "good"),
+                           ("control", "critical"), ("fault", "serious")):
+            label = lane.find(f"s:g[@class='{kind}-label']", NS)
+            if label is not None:
+                assert label.attrib["fill"] == STATUS[role]
+                assert label.findall("s:use", NS)
+    playhead = root.find(".//s:line[@class='playhead']", NS)
+    assert playhead.attrib["stroke"] == INK[mode]
+    assert float(playhead.attrib["opacity"]) == 0.5
+    desc = root.find("s:desc", NS).text
+    for phrase in ("Peach ticks", "yellow lines", "Red segments", "green dots", "Dashed red lines"):
+        assert phrase in desc
