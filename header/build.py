@@ -7,15 +7,19 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from text import Face, Outliner
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
-MONA = HERE / "fonts" / "MonaSansVF[wdth,opsz,wght].ttf"
-NEON = HERE / "fonts" / "MonaspaceNeonVar.ttf"
+MONA = ROOT / "figkit" / "fonts" / "MonaSansVF[wdth,opsz,wght].ttf"
+NEON = ROOT / "figkit" / "fonts" / "MonaspaceNeonVar.ttf"
 
 # The sequential blue that marks Qwen3-0.6B in the qk-attribution figures, light to dark.
 RAMP = ("#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b")

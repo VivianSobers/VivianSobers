@@ -2,9 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from text import Face, Outliner, run_start
+from figkit.text import Face, Outliner, run_start
 
-MONA = Path(__file__).parent / "fonts" / "MonaSansVF[wdth,opsz,wght].ttf"
+ROOT = Path(__file__).resolve().parents[1]
+MONA = ROOT / "figkit" / "fonts" / "MonaSansVF[wdth,opsz,wght].ttf"
 
 
 @pytest.fixture(scope="module")
@@ -43,3 +44,4 @@ def test_same_glyph_from_two_instances_gets_two_definitions(mona):
     outliner.run(mona, "V", x=0, y=0, size=20)
     outliner.run(Face(MONA, {"wdth": 100, "wght": 400}), "V", x=0, y=0, size=20)
     assert outliner.defs().count("<path ") == 2
+
