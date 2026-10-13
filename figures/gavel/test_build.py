@@ -132,3 +132,51 @@ def test_marks_scale_with_the_larger_labels(mode):
     for path in connector_paths:
         assert float(path.attrib["stroke-width"]) == 2.5
 
+
+
+@pytest.mark.parametrize('mode', ['light', 'dark'])
+def test_bid_chips_and_travelers_use_outcome_strokes_and_ink_text(mode):
+    from figkit.color import CATEGORICAL, INK, STATUS
+    root = ET.fromstring(builder().render(data(), mode, freeze_at=7.5))
+    colors = {'accepted': STATUS['good'], 'rejected': STATUS['critical'],
+              'duplicate': CATEGORICAL['violet'][mode]}
+    chips = root.findall('.//s:g[@class="bid-chip"]', NS)
+    travelers = root.findall('.//s:g[@class="traveler"]', NS)
+    assert len(chips) == len(travelers) == len(data()['requests'])
+    for row, chip, traveler in zip(data()['requests'], chips, travelers):
+        for mark in (chip, traveler):
+            rect = mark.find('s:rect', NS)
+            assert rect.attrib['stroke'] == colors[row['outcome']]
+            assert rect.attrib['fill'] == colors[row['outcome']]
+            if row['outcome'] == 'accepted':
+                assert float(rect.attrib['fill-opacity']) == 0.15
+            assert all(label.attrib['fill'] == INK[mode] for label in mark.findall('s:g', NS))
+
+
+@pytest.mark.parametrize('mode', ['light', 'dark'])
+def test_accepted_log_cells_use_good_strokes_and_tints_opened_stays_neutral(mode):
+    from figkit.color import INK, MUTED, STATUS
+    root = ET.fromstring(builder().render(data(), mode))
+    cells = root.findall('.//s:g[@class="log-cell"]', NS)
+    for event, cell in zip(data()['events'], cells):
+        rect = cell.find('s:rect', NS)
+        if event['type'] == 'bid_accepted':
+            assert rect.attrib['stroke'] == rect.attrib['fill'] == STATUS['good']
+            assert float(rect.attrib['fill-opacity']) == 0.15
+            assert cell.find('s:g', NS).attrib['fill'] == STATUS['good']
+        else:
+            assert rect.attrib['stroke'] == rect.attrib['fill'] == MUTED[mode]
+            assert float(rect.attrib['fill-opacity']) == 0.08
+            assert all(label.attrib['fill'] in (INK[mode], MUTED[mode])
+                       for label in cell.findall('s:g', NS))
+
+
+@pytest.mark.parametrize('mode', ['light', 'dark'])
+def test_rejection_and_returned_labels_match_outcome_colors(mode):
+    from figkit.color import CATEGORICAL, MUTED, STATUS
+    root = ET.fromstring(builder().render(data(), mode))
+    for name, color in [('rejection', STATUS['critical']),
+                        ('duplicate', CATEGORICAL['violet'][mode])]:
+        labels = root.find(f'.//s:g[@class="{name}"]', NS).findall('s:g', NS)
+        assert labels[0].attrib['fill'] == color
+        assert labels[1].attrib['fill'] == MUTED[mode]

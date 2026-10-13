@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
+from figkit.color import CATEGORICAL, FAINT, INK, MUTED, STATUS
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
@@ -42,9 +42,9 @@ def render(data, mode, freeze_at=None):
         return (f'<g fill="{color or INK[mode]}">'
                 f'{out.run(face[kind], label, x, y, size, anchor)}</g>')
 
-    def box(x, y, w, h, color):
+    def box(x, y, w, h, color, tint=0.08):
         return (f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="8" '
-                f'fill="{color}" fill-opacity="0.08" stroke="{color}" stroke-width="1.5"/>')
+                f'fill="{color}" fill-opacity="{tint:g}" stroke="{color}" stroke-width="1.5"/>')
 
     title = 'Every auction is one ordered log'
     subtitle = 'Gleam decides, Elixir serializes, PostgreSQL fences each append on (auction, seq).'
@@ -86,7 +86,9 @@ def render(data, mode, freeze_at=None):
                 f'fill="none" stroke="{MUTED[mode]}" stroke-width="2.5" stroke-linecap="round"/></g>')
     travelers = []
     for index, (row, (x, y, w, h)) in enumerate(zip(data['requests'], chip_boxes)):
-        color = EMBER[mode] if row['outcome'] == 'rejected' else BLUE[mode]
+        color = {'accepted': STATUS['good'], 'rejected': STATUS['critical'],
+                 'duplicate': CATEGORICAL['violet'][mode]}[row['outcome']]
+        tint = 0.15 if row['outcome'] == 'accepted' else 0.08
         label = f"{row['amount']} {data['config']['amount_unit']}   {row['request_id']}"
         outcome = 'retry' if row['outcome'] == 'duplicate' else row['outcome']
         start = 0.6 + index * 2.4
@@ -106,10 +108,10 @@ def render(data, mode, freeze_at=None):
                                  (13.25, 'opacity:1'), (14, 'opacity:0.25')])
         travelers.append(f'<g class="traveler" data-outcome="{row["outcome"]}" '
                          f'style="{style(f"travel{index}")}" aria-hidden="true">'
-                         f'{box(x, y, w, h, color)}{text(label, x + 14, y + 20, 16, "number")}</g>')
+                         f'{box(x, y, w, h, color, tint)}{text(label, x + 14, y + 20, 16, "number")}</g>')
         body.append(f'<g class="bid-chip" style="{style(f"chip{index}")}" aria-label={quoteattr(label + ": " + outcome)}>'
-                    f'{box(x, y, w, h, color)}{text(label, x + 14, y + 20, 16, "number")}'
-                    f'{text(outcome, x + 14, y + 43, 16, color=color)}</g>')
+                    f'{box(x, y, w, h, color, tint)}{text(label, x + 14, y + 20, 16, "number")}'
+                    f'{text(outcome, x + 14, y + 43, 16)}</g>')
         if y_top < y + h / 2 < y_bot:
             body.append(f'<path style="{style("rules")}" d="M320 {y + h / 2:g}H375" stroke="{MUTED[mode]}" stroke-width="2.5"/>')
     process_frames = [(0, 'opacity:1')]
@@ -126,7 +128,8 @@ def render(data, mode, freeze_at=None):
              text('Elixir GenServer', x_proc_mid, 240, 16, color=MUTED[mode], anchor='middle'), '</g>']
     descriptions = []
     for event, (x, y, w, h) in zip(data['events'], cell_boxes):
-        color = BLUE[mode] if event['type'] == 'bid_accepted' else MUTED[mode]
+        color = STATUS['good'] if event['type'] == 'bid_accepted' else MUTED[mode]
+        tint = 0.15 if event['type'] == 'bid_accepted' else 0.08
         label = f"seq {event['seq']}"
         amount = (f"{event['amount']} {data['config']['amount_unit']}"
                   if event['type'] == 'bid_accepted' else 'opened')
@@ -138,7 +141,7 @@ def render(data, mode, freeze_at=None):
                          if row['outcome'] == 'accepted' and row['request_id'] == event['request_id'])
             animation = f' style="{style(decisions[index])}"'
         body.append(f'<g class="log-cell"{animation} data-seq="{event["seq"]}" aria-label={quoteattr(label + ": " + amount)}>'
-                    f'{box(x, y, w, h, color)}{text(label, x + w / 2, y + 25, 16, "number", color, "middle")}'
+                    f'{box(x, y, w, h, color, tint)}{text(label, x + w / 2, y + 25, 16, "number", color, "middle")}'
                     f'{text(amount, x + w / 2, y + 49, 16, "number", anchor="middle")}'
                     f'{text(request, x + w / 2, y + 73, 16, "number", MUTED[mode], "middle")}</g>')
     rejected = next(row for row in data['requests'] if row['outcome'] == 'rejected')
@@ -148,11 +151,11 @@ def render(data, mode, freeze_at=None):
     rejection_index = data['requests'].index(rejected)
     duplicate_index = data['requests'].index(duplicate)
     body += [f'<g class="rejection" style="{style(decisions[rejection_index])}">'
-             + text(rejection, 425, 280, 16, color=EMBER[mode])
+             + text(rejection, 425, 280, 16, color=STATUS['critical'])
              + text(f"minimum {rejected['minimum']} {data['config']['amount_unit']}",
                     425, 304, 16, 'number', MUTED[mode]) + '</g>',
              f'<g class="duplicate" style="{style(decisions[duplicate_index])}">'
-             + text(returned, x_log, 280, 16, color=BLUE[mode])
+             + text(returned, x_log, 280, 16, color=CATEGORICAL['violet'][mode])
              + text(f"{duplicate['request_id']}: original bid at seq {duplicate['original_seq']}",
                     x_log, 304, 16, 'number', MUTED[mode]) + '</g>',
              text(f"Unique {data['config']['sequence_fence']}", x_log, 328, 16, 'number', MUTED[mode]),
