@@ -61,7 +61,8 @@ def test_final_lanes_follow_recorded_times(mode):
         assert f"cleared +{build.duration(row['resolved_after_s'])}" in desc
     assert len(root.findall(".//s:g[@class='control-label']", NS)) == 1
     assert not root.findall(".//s:text", NS)
-    assert "@keyframes" not in svg
+    assert "@keyframes sweep" in svg
+    assert ".fired,.cleared,.fired-label,.cleared-label,.control-label{opacity:1}" in svg
     assert "prefers-reduced-motion:reduce" in svg
     assert len(svg.encode()) < 400_000
 
@@ -116,3 +117,51 @@ def test_each_lane_shows_the_fault_and_wait_until_firing(mode):
     assert len(root.findall(".//s:g[@class='fault-label']", NS)) == 1
     assert lanes[0].find("s:g[@class='fault-label']", NS) is not None
     assert "wait" in root.find("s:desc", NS).text
+
+
+def test_clock_sweeps_then_holds_and_fades_with_a_final_base_state():
+    root = ET.fromstring(build.render(DATA, "light"))
+    css = root.find("s:style", NS).text
+    playhead = root.find(".//s:line[@class='playhead']", NS)
+    assert playhead is not None
+    assert float(playhead.attrib["x1"]) == float(playhead.attrib["x2"]) == 350
+    assert "transform:translateX(890px)" in css
+    assert "70.588235%" in css
+    assert "94.117647%" in css
+    assert "17s linear infinite" in css
+    assert "17s ease-in-out infinite" in css
+    clip = root.find(".//s:clipPath[@id='clock-window']/s:rect", NS)
+    assert clip is not None
+    assert float(clip.attrib["width"]) == 890
+    assert ".fired,.cleared,.fired-label,.cleared-label,.control-label{opacity:1}" in css
+    assert ".playhead{transform:translateX(890px)}" in css
+    for lane in root.findall(".//s:g[@class='lane']", NS):
+        for kind in ("wait", "firing", "control"):
+            assert lane.find(f"s:line[@class='{kind}']", NS).attrib["clip-path"] == "url(#clock-window)"
+
+
+def test_event_reveals_follow_the_supplied_times_and_freeze_together():
+    import re
+
+    data = copy.deepcopy(DATA)
+    data["rows"][0]["fired_after_s"] = 540
+    data["rows"][0]["resolved_after_s"] = 180
+    root = ET.fromstring(build.render(data, "dark", freeze_at=6))
+    css = root.find("s:style", NS).text
+    lanes = root.findall(".//s:g[@class='lane']", NS)
+    for index, (lane, row) in enumerate(zip(lanes, data["rows"])):
+        for kind, seconds in (("fired", row["fired_after_s"]),
+                              ("cleared", row["fired_after_s"] + row["resolved_after_s"])):
+            name = f"{kind}-{index}"
+            match = re.search(rf"@keyframes {name}\{{0%\{{opacity:0\}}([\d.]+)%\{{opacity:1\}}100%\{{opacity:1\}}\}}", css)
+            assert match is not None
+            assert float(match[1]) == pytest.approx(seconds / 2160 * 12 / 17 * 100, abs=0.000001)
+            dot = lane.find(f"s:circle[@class='{kind}']", NS)
+            label = lane.find(f"s:g[@class='{kind}-label']", NS)
+            for mark in (dot, label):
+                assert mark is not None
+                assert f"animation:{name} 17s steps(1,end) infinite" in mark.attrib["style"]
+                assert "animation-delay:-6.000s" in mark.attrib["style"]
+    assert "animation-delay:-6.000s" in root.find(".//s:line[@class='playhead']", NS).attrib["style"]
+    assert "animation-play-state:paused!important" in css
+    assert "@media (prefers-reduced-motion:reduce){*{animation:none!important}}" in css
