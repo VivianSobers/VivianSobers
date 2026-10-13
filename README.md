@@ -13,9 +13,15 @@ Every figure on this page is drawn from a recorded run or from the project's own
 
 ## Systems I'm building
 
-### [drillbook](https://github.com/VivianSobers/drillbook) — Runbooks you can put to the test
+### [drillbook](https://github.com/VivianSobers/drillbook): runbooks you can put to the test
 
-Inject a fault, verify that the Prometheus alert fires and reaches the right receiver, execute the runbook, and check that the alert clears. Then repeat without the fix as a control. **All five included drills pass with their controls holding.**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/drills/drills-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/drills/drills-light.svg">
+  <img alt="Five drills from one drillbook run on 2026-10-08, drawn on a 36-minute clock. Each alert fired after its rule's wait (1m45s, 17m31s, 16m01s, 30m46s and 16m30s) and cleared between 30 seconds and 5m31s after the runbook ran, while the control run of each drill was still firing at the end." src="figures/drills/drills-light.svg" width="100%">
+</picture>
+
+Inject a fault, check that the Prometheus alert fires and reaches the right receiver, run the runbook, and check that the alert clears. Then repeat the fault without the fix as a control. All five included drills pass with their controls holding.
 
 <sub>Go · Prometheus · Alertmanager · Kubernetes · Helm · Terraform · Ansible</sub>
 
