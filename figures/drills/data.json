@@ -1,0 +1,81 @@
+{
+  "source": {
+    "repo": "https://github.com/VivianSobers/drillbook",
+    "commit": "afb13d3767ce83638b1f5defaafeba677db7cb22",
+    "paths": [
+      ".drillbook/results.jsonl",
+      "docs/v0.1-drill-results.md"
+    ]
+  },
+  "config": {
+    "run_started": "2026-10-08T15:24:10Z",
+    "run_finished": "2026-10-08T18:21:27Z"
+  },
+  "rows": [
+    {
+      "drill": "shop-api-scaled-to-zero",
+      "alert": "ShopApiDown",
+      "verdict": "pass",
+      "receivers": [
+        "shop-team"
+      ],
+      "control_ran": true,
+      "control_cleared": false,
+      "started": "2026-10-08T20:54:10.398058362+05:30",
+      "fired_after_s": 105.081437657,
+      "resolved_after_s": 30.986877785
+    },
+    {
+      "drill": "shop-api-bad-image",
+      "alert": "KubeDeploymentRolloutStuck",
+      "verdict": "pass",
+      "receivers": [
+        "shop-team"
+      ],
+      "control_ran": true,
+      "control_cleared": false,
+      "started": "2026-10-08T20:56:26.551618389+05:30",
+      "fired_after_s": 1050.534667137,
+      "resolved_after_s": 30.346917613
+    },
+    {
+      "drill": "shop-api-crashloop",
+      "alert": "KubePodCrashLooping",
+      "verdict": "pass",
+      "receivers": [
+        "shop-team"
+      ],
+      "control_ran": true,
+      "control_cleared": false,
+      "started": "2026-10-08T21:37:28.317466146+05:30",
+      "fired_after_s": 960.567843419,
+      "resolved_after_s": 330.798976279
+    },
+    {
+      "drill": "app-data-disk-full",
+      "alert": "NodeFilesystemAlmostOutOfSpace",
+      "verdict": "pass",
+      "receivers": [
+        "platform-oncall"
+      ],
+      "control_ran": true,
+      "control_cleared": false,
+      "started": "2026-10-08T21:58:59.745618439+05:30",
+      "fired_after_s": 1845.947404463,
+      "resolved_after_s": 33.328483677
+    },
+    {
+      "drill": "kubelet-stopped",
+      "alert": "KubeNodeNotReady",
+      "verdict": "pass",
+      "receivers": [
+        "platform-oncall"
+      ],
+      "control_ran": true,
+      "control_cleared": false,
+      "started": "2026-10-08T23:06:49.059229086+05:30",
+      "fired_after_s": 990.487617806,
+      "resolved_after_s": 37.961333201
+    }
+  ]
+}
