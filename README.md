@@ -1,25 +1,15 @@
-<h1 align="center">Vivian Sobers E</h1>
-<p align="center"><strong>Systems engineering · Infrastructure · Mechanistic interpretability</strong><br>
-Computer science at PES University, Bengaluru</p>
-
-<p align="center">
-  <a href="#systems-im-building">Systems</a> &nbsp; / &nbsp;
-  <a href="#experiments-with-evidence">Experiments</a> &nbsp; / &nbsp;
-  <a href="#tools-for-real-work">Tools</a>
-</p>
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="header/heads-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="header/heads-light.svg">
   <img alt="Animated header. A triangle of small diamonds sits above the line 'Every number on this page came from a run.', which is written out twice. Each diamond shows how much attention one word pays to an earlier word inside Qwen3-0.6B. The triangle cycles through four real heads: one sends its attention to the first word, one looks one word back, one looks at the word that came next the first time the line was read, and one spreads its attention over everything before it." src="header/heads-light.svg" width="100%">
 </picture>
 
+<p align="center"><strong>Systems engineering, infrastructure and mechanistic interpretability</strong><br>
+Computer science at PES University, Bengaluru</p>
 
-<sub>The header is an experiment, too: four real attention heads from Qwen3-0.6B reading the same sentence twice. The extraction and rendering code live in this repository.</sub>
+I build across the stack, from storage and stream processing to GPU experiments and model internals. The part I like is where a design meets a real machine: a node disappears, a deadline expires, or a measurement disagrees with the explanation.
 
-I build across the stack, from storage and stream processing to GPU experiments and model internals. I like the part where a design meets a real machine: a node disappears, a deadline expires, or a measurement disagrees with the explanation.
-
-My projects usually come with runnable setups, recorded results, and the failures found along the way.
+Every figure on this page is drawn from a recorded run or from the project's own code. The data behind each one is checked into this repository, and the section at the bottom says where it came from.
 
 ## Systems I'm building
 
