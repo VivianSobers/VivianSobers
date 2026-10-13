@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sys
@@ -256,7 +257,23 @@ def readme_block(data: dict) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--preview", help="comma-separated frame times in seconds")
+    args = parser.parse_args()
     data = json.loads((HERE / "attention.json").read_text())
+    if args.preview is not None:
+        try:
+            times = [float(value) for value in args.preview.split(",")]
+            if any(not math.isfinite(time) or time < 0 for time in times):
+                raise ValueError
+        except ValueError:
+            parser.error("preview times must be finite, non-negative seconds")
+        preview = ROOT / ".preview"
+        preview.mkdir(exist_ok=True)
+        for mode in ("light", "dark"):
+            for time in times:
+                (preview / f"heads-{mode}-{time:g}.svg").write_text(render(data, mode, freeze_at=time))
+        return
     for mode in ("light", "dark"):
         (HERE / f"heads-{mode}.svg").write_text(render(data, mode))
     readme = HERE.parent / "README.md"
