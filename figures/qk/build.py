@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from figkit.cli import main
 from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
 from figkit.svg import delay, document
-from figkit.text import Face, Outliner, power_run
+from figkit.text import Face, Outliner, run_start
 
 HERE = Path(__file__).resolve().parent
 SUPERSCRIPT = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
@@ -23,11 +23,11 @@ SUPERSCRIPT = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
 @dataclass(frozen=True)
 class Geometry:
     width: float = 1280
-    height: float = 430
+    height: float = 590
     left: float = 80
     right: float = 1200
-    top: float = 126
-    bottom: float = 396
+    top: float = 160
+    bottom: float = 538
 
 
 def log_x(error: float, geometry: Geometry = Geometry()) -> float:
@@ -51,6 +51,18 @@ def power_parts(value: float) -> tuple[str, str]:
     return base, str(int(exponent)).replace("-", "−")
 
 
+def power_run(out: Outliner, face: Face, parts: tuple[str, str], x: float, y: float,
+              size: float, anchor: str = "start") -> str:
+    base, exponent = parts
+    if not exponent:
+        return out.run(face, base, x, y, size, anchor)
+    raised_size = max(16, size * 0.7)
+    width = face.advance(base, size)
+    start = run_start(x, width + face.advance(exponent, raised_size), anchor)
+    return (out.run(face, base, start, y, size)
+            + out.run(face, exponent, start + width, y - size * 0.4, raised_size))
+
+
 @cache
 def faces() -> dict[str, Face]:
     fonts = ROOT / "figkit" / "fonts"
@@ -70,35 +82,35 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     model = data["config"]["model"].split("/")[-1]
     title = f"{len(rows)} attention heads, one score form at a time"
     subtitle = f"Relative error against {model}'s own attention scores, one prompt, every head"
-    labels = (("exact", "exact form", BLUE[mode], 98),
-              ("no_rope", "rotary left out", EMBER[mode], 98),
-              ("plain", "plain q·k", EMBER[mode], 110))
+    labels = (("exact", "exact form", BLUE[mode], 108),
+              ("no_rope", "rotary left out", EMBER[mode], 108),
+              ("plain", "plain q·k", EMBER[mode], 138))
     face, out = faces(), Outliner()
-    ink = out.run(face["title"], title, 40, 44, 22)
-    muted = out.run(face["body"], subtitle, 40, 70, 15)
-    muted += out.run(face["body"], "Layer", 40, 116, 13)
+    ink = out.run(face["title"], title, 40, 44, 26)
+    muted = out.run(face["body"], subtitle, 40, 74, 18)
+    muted += out.run(face["body"], "Layer", 40, 148, 16)
     grid, ticks, markers, values = [], [], [], []
     for exponent in range(-8, 4):
         x = log_x(10 ** exponent, geometry)
         grid.append(f'<line x1="{x:.2f}" y1="{geometry.top}" x2="{x:.2f}" y2="{geometry.bottom}"/>')
-        ticks.append(f'<line class="tick" x1="{x:.2f}" y1="{geometry.bottom}" x2="{x:.2f}" y2="{geometry.bottom + 4}"/>')
+        ticks.append(f'<line class="tick" x1="{x:.2f}" y1="{geometry.bottom}" x2="{x:.2f}" y2="{geometry.bottom + 7}"/>')
         muted += (f'<g class="power-tick">'
-                  + power_run(out, face["number"], ("10", str(exponent).replace("-", "−")), x, geometry.bottom + 18, 13, "middle")
+                  + power_run(out, face["number"], ("10", str(exponent).replace("-", "−")), x, geometry.bottom + 30, 17, "middle")
                   + '</g>')
     for index, layer in enumerate(layers):
         if index % 7 == 0 or index == len(layers) - 1:
-            muted += out.run(face["number"], str(layer), 62, ys[layer] + 4, 13, "end")
+            muted += out.run(face["number"], str(layer), 62, ys[layer] + 5, 16, "end")
     for form, label, color, y in labels:
         value = number(median(row[form] for row in rows))
         x = log_x(median(row[form] for row in rows), geometry)
         text = f"{label}, median {value}"
         values.append(text)
         prefix = f"{label}, median "
-        label_ink = out.run(face["body"], prefix, x + 7, y, 13)
+        label_ink = out.run(face["body"], prefix, x + 10, y, 17)
         label_ink += power_run(out, face["number"], power_parts(median(row[form] for row in rows)),
-                               x + 7 + face["body"].advance(prefix, 13), y, 13)
+                               x + 10 + face["body"].advance(prefix, 17), y, 17)
         markers.append(
-            f'<line class="median" x1="{x:.2f}" y1="{y + 6}" x2="{x:.2f}" y2="{geometry.bottom}" stroke="{color}" stroke-width="1"/>'
+            f'<line class="median" x1="{x:.2f}" y1="{y + 6}" x2="{x:.2f}" y2="{geometry.bottom}" stroke="{color}" stroke-width="2.5"/>'
             f'<g class="label {form}" opacity="1" fill="{color}" style="{delay(0, freeze_at)}">{label_ink}</g>'
         )
     traces, dots = [], []
@@ -106,16 +118,16 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         y = ys[row["layer"]]
         stagger = delay(row["layer"] * 0.02, freeze_at)
         for form in ("plain", "no_rope"):
-            paint = (f'fill="none" stroke="{EMBER[mode]}" stroke-width="1"' if form == "plain"
+            paint = (f'fill="none" stroke="{EMBER[mode]}" stroke-width="2.5"' if form == "plain"
                      else f'fill="{EMBER[mode]}"')
             traces.append(
                 f'<circle class="trace {form}" cx="{log_x(row[form], geometry):.2f}" cy="{y:.2f}" '
-                f'r="2.5" opacity="0.3" {paint} style="{stagger}"/>'
+                f'r="5" opacity="0.3" {paint} style="{stagger}"/>'
             )
         x = log_x(row["exact"], geometry)
         stops = f'--plain:{log_x(row["plain"], geometry) - x:.2f}px;--no_rope:{log_x(row["no_rope"], geometry) - x:.2f}px'
         dots.append(
-            f'<circle class="head" cx="{x:.2f}" cy="{y:.2f}" r="3.5" opacity="0.85" '
+            f'<circle class="head" cx="{x:.2f}" cy="{y:.2f}" r="5" opacity="0.85" '
             f'fill="{BLUE[mode]}" style="{stops};{stagger}"/>'
         )
     css = (
@@ -138,8 +150,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         ".label.exact{animation:label_exact 16s ease-in-out infinite backwards}"
     )
     body = (
-        f'<g stroke="{FAINT[mode]}" stroke-width="1" opacity="0.6">{"".join(grid)}</g>'
-        f'<g stroke="{MUTED[mode]}" stroke-width="1" stroke-linecap="round">'
+        f'<g stroke="{FAINT[mode]}" stroke-width="2.5" opacity="0.6">{"".join(grid)}</g>'
+        f'<g stroke="{MUTED[mode]}" stroke-width="2.5" stroke-linecap="round">'
         f'<line x1="{geometry.left}" y1="{geometry.bottom}" x2="{geometry.right}" y2="{geometry.bottom}"/>{"".join(ticks)}</g>'
         f'{"".join(markers)}{"".join(traces)}{"".join(dots)}<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g>'
     )

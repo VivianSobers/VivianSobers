@@ -40,7 +40,7 @@ def test_static_state_places_every_head_at_its_exact_error(mode):
     snapshot = data()
     svg = build.render(snapshot, mode)
     root = ET.fromstring(svg)
-    assert root.attrib["viewBox"] == "0 0 1280 430"
+    assert root.attrib["viewBox"] == "0 0 1280 590"
     dots = root.findall('.//s:circle[@class="head"]', NS)
     assert len(dots) == len(snapshot["rows"])
     for dot, row in zip(dots, snapshot["rows"]):
@@ -108,13 +108,13 @@ def test_power_run_centers_base_and_raised_exponent():
     from figkit.text import Outliner
     face = build.faces()["number"]
     base, exponent = build.power_parts(2.5e-7)
-    size, x, y = 15, 300, 200
+    size, x, y = 17, 300, 200
     out = Outliner()
     run = build.power_run(out, face, (base, exponent), x, y, size, "middle")
-    width = face.advance(base, size) + face.advance(exponent, size * 0.7)
+    width = face.advance(base, size) + face.advance(exponent, 16)
     start = x - width / 2
     expected = out.run(face, base, start, y, size)
-    expected += out.run(face, exponent, start + face.advance(base, size), y - size * 0.4, size * 0.7)
+    expected += out.run(face, exponent, start + face.advance(base, size), y - size * 0.4, 16)
     assert run == expected
 
 
@@ -125,9 +125,9 @@ def test_plot_spacing_and_mark_visibility():
     dots = root.findall('.//s:circle[@class="head"]', NS)
     ys = sorted({float(dot.attrib["cy"]) for dot in dots})
     gaps = [b - a for a, b in zip(ys, ys[1:])]
-    assert min(gaps) >= 10
+    assert min(gaps) >= 14
     assert all(gap == pytest.approx(gaps[0]) for gap in gaps)
-    assert all(dot.attrib["r"] == "3.5" and dot.attrib["opacity"] == "0.85" for dot in dots)
+    assert all(dot.attrib["r"] == "5" and dot.attrib["opacity"] == "0.85" for dot in dots)
     from figkit.color import FAINT
     grid = root.find(f'.//s:g[@stroke="{FAINT["light"]}"]', NS)
     assert grid.attrib["opacity"] == "0.6"
@@ -137,7 +137,7 @@ def test_plot_spacing_and_mark_visibility():
     for tick in ticks:
         uses = tick.findall("s:use", NS)
         baseline = float(uses[0].attrib["transform"].split(")")[0].split()[-1])
-        assert baseline == geometry.bottom + 18
+        assert baseline == geometry.bottom + 30
         assert geometry.height - baseline >= 14
 
 
@@ -158,10 +158,10 @@ def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
             if form == "plain":
                 assert trace.attrib["fill"] == "none"
                 assert trace.attrib["stroke"] == EMBER[mode]
-                assert trace.attrib["stroke-width"] == "1"
+                assert trace.attrib["stroke-width"] == "2.5"
             else:
                 assert trace.attrib["fill"] == EMBER[mode]
-            assert trace.attrib["r"] == "2.5"
+            assert trace.attrib["r"] == "5"
             assert trace.attrib["opacity"] == "0.3"
             assert circles.index(trace) < circles.index(heads[0])
 
@@ -170,3 +170,28 @@ def test_description_explains_earlier_form_traces():
     root = ET.fromstring(builder().render(data(), "light"))
     desc = root.find("s:desc", NS).text
     assert "Faint orange dots mark the earlier plain-product and rotary-left-out forms." in desc
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_readme_text_and_lines_have_legible_sizes(mode, monkeypatch):
+    from figkit.text import Outliner
+    sizes = []
+    original = Outliner.run
+    def record_run(self, face, text, x, y, size, anchor="start"):
+        if text:
+            sizes.append(size)
+        return original(self, face, text, x, y, size, anchor)
+    monkeypatch.setattr(Outliner, "run", record_run)
+    root = ET.fromstring(builder().render(data(), mode))
+    assert min(sizes) >= 16
+    assert max(sizes) == pytest.approx(26)
+    assert 18 in sizes
+    parents = {child: parent for parent in root.iter() for child in parent}
+    for line in root.findall(".//s:line", NS):
+        node = line
+        while "stroke-width" not in node.attrib:
+            node = parents[node]
+        assert float(node.attrib["stroke-width"]) == 2.5
+    for label in root.findall('.//s:g[@class="power-tick"]', NS):
+        uses = label.findall("s:use", NS)
+        assert len({use.attrib["transform"].split("scale(")[1] for use in uses}) == 2
