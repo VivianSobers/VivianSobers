@@ -71,7 +71,15 @@ Decomposing attention scores into query and key feature interactions. The correc
 
 Can a CUDA job pause into host RAM and resume intact? 33 runs went through 388 pause and resume cycles across nine workload types, each matching an uninterrupted run bit for bit. The repository has an installable validation CLI and documents the seven driver hazards that make pausing an arbitrary job unsafe. The scheduler is future work.
 
-- **[Differentiable Rasterizer](https://github.com/VivianSobers/Differentiable-Rasterizer)** — A Rust renderer that runs backwards: optimize triangle positions, colors, and opacity to reconstruct an image. The recorded 150-triangle fit reduces loss **606×**. Includes a PyTorch autograd layer and a WebAssembly viewer.
+### [Differentiable Rasterizer](https://github.com/VivianSobers/Differentiable-Rasterizer): a renderer that runs backwards
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/raster/raster-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/raster/raster-light.svg">
+  <img alt="Three panels: the 176-pixel target image, the same image rebuilt from 150 translucent triangles, and the loss curve on a log scale. In this seeded run the loss fell 503 times by its best step, 546 of 797." src="figures/raster/raster-light.svg" width="100%">
+</picture>
+
+A Rust renderer whose output is differentiable, so it can optimize triangle positions, colours and opacity to reconstruct an image. The seeded run above cut the loss 503× in 797 steps on one core. It includes a PyTorch autograd layer and a WebAssembly viewer.
 
 - **[Stormbreaker](https://github.com/VivianSobers/Stormbreaker)** — Learning per-machine models of Linux power consumption to estimate which applications drain the battery. **4.2% final-energy error over a held-out 27.6-minute discharge**; the repository separately measures the weaker per-application attribution claim.
 
