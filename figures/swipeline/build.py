@@ -9,11 +9,20 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
+from figkit.color import CATEGORICAL, STATUS, FAINT, INK, MUTED
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
+TOPIC_HUES = {
+    "auth.requests": "blue", "auth.proposals": "blue",
+    "decisions.raw": "aqua", "decisions": "aqua", "lifecycle": "orange",
+}
+NODE_HUES = {
+    "replayer": ("blue",), "PostgreSQL": ("blue",), "Flink": ("blue", "aqua"),
+    "Druid": ("aqua",), "Superset": ("aqua",),
+    "Spark batch": ("orange",), "Hudi on SeaweedFS": ("orange",),
+}
 
 
 @dataclass(frozen=True)
@@ -186,6 +195,14 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
             f'width="{node.width:g}" height="{node.height:g}" rx="{node.rx:g}" ry="{node.ry:g}" '
             f'fill="none" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
         )
+        hues = NODE_HUES.get(node.name, ())
+        for index, hue in enumerate(hues):
+            width = (node.width - 2 * node.rx) / len(hues)
+            node_elements.append(
+                f'<rect class="node-accent" aria-label="{node.name}" '
+                f'x="{node.x + node.rx + index * width:g}" y="{node.y:g}" '
+                f'width="{width:g}" height="2" fill="{CATEGORICAL[hue][mode]}"/>'
+            )
         if node.name == "PostgreSQL":
             text_cx = node.x + 35 + (node.width - 35) / 2
             node_names.append(
@@ -217,93 +234,95 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
     bus_topics = []
     for topic, topic_y in bus.topics.items():
         bus_topics.append(
-            out.run(face["number"], topic, bus.cx, topic_y + 5, 16, anchor="middle")
+            f'<g aria-label="{topic}" fill="{CATEGORICAL[TOPIC_HUES[topic]][mode]}">'
+            f'{out.run(face["number"], topic, bus.cx, topic_y + 5, 16, anchor="middle")}</g>'
         )
 
-    marker_id = f"arrow-{mode}"
-    defs = (
-        f'{out.defs()}'
-        f'<marker id="{marker_id}" viewBox="0 0 10 10" refX="7" refY="5" '
+    markers = "".join(
+        f'<marker id="arrow-{hue}-{mode}" viewBox="0 0 10 10" refX="7" refY="5" '
         f'markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">'
-        f'<path d="M 1 2 L 7 5 L 1 8 z" fill="{MUTED[mode]}"/>'
-        f'</marker>'
+        f'<path d="M 1 2 L 7 5 L 1 8 z" fill="{CATEGORICAL[hue][mode]}"/></marker>'
+        for hue in ("blue", "aqua", "orange")
     )
+
+    defs = out.defs() + markers
 
     edge_elements = []
     for edge in edges:
+        hue = TOPIC_HUES[edge.topic] if edge.topic else NODE_HUES.get(edge.source, ("blue",))[0]
         edge_elements.append(
-            f'<path class="edge" d="{edge.path_d()}" stroke="{MUTED[mode]}" stroke-width="2.5" '
-            f'fill="none" stroke-linecap="round" marker-end="url(#{marker_id})"/>'
+            f'<path class="edge" d="{edge.path_d()}" stroke="{CATEGORICAL[hue][mode]}" stroke-width="2.5" '
+            f'fill="none" stroke-linecap="round" marker-end="url(#arrow-{hue}-{mode})"/>'
         )
 
     frozen = delay(0, freeze_at)
 
     dots = []
 
-    # Transaction 1: Blue dots (r 6)
+    # Transaction 1
     dots.append(
-        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{BLUE[mode]}" style="animation:t1_seg1 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_seg1 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t1_seg2 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_seg2 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t1_seg3 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_seg3 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{BLUE[mode]}" style="animation:t1_seg4 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_seg4 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="560" cy="205" r="6" fill="{BLUE[mode]}" style="animation:t1_seg5 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="560" cy="205" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_seg5 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="settled-dot" cx="325" cy="375" r="6" fill="{BLUE[mode]}" style="animation:t1_settle 14s linear infinite;{frozen}"/>'
-    )
-
-    # Transaction 2: Blue dots + Fail-closed decision settling in PostgreSQL
-    dots.append(
-        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{BLUE[mode]}" style="animation:t2_seg1 14s linear infinite;{frozen}"/>'
-    )
-    dots.append(
-        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t2_seg2 14s linear infinite;{frozen}"/>'
-    )
-    dots.append(
-        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t2_seg3 14s linear infinite;{frozen}"/>'
-    )
-    dots.append(
-        f'<circle class="settled-dot" cx="325" cy="405" r="6" fill="{BLUE[mode]}" style="animation:t2_settle 14s linear infinite;{frozen}"/>'
+        f'<circle class="settled-dot" cx="325" cy="375" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t1_settle 14s linear infinite;{frozen}"/>'
     )
 
-    # Transaction 2 late proposal: EMBER dots (r 6)
+    # Transaction 2
     dots.append(
-        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{EMBER[mode]}" style="animation:t2_prop_seg4 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t2_seg1 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="late-proposal-dot" cx="560" cy="205" r="6" fill="{EMBER[mode]}" style="animation:late_proposal_dot 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t2_seg2 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t2_seg3 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="settled-dot" cx="325" cy="405" r="6" fill="{CATEGORICAL["blue"][mode]}" style="animation:t2_settle 14s linear infinite;{frozen}"/>'
+    )
+
+    # Transaction 2 late proposal
+    dots.append(
+        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{STATUS["critical"]}" style="animation:t2_prop_seg4 14s linear infinite;{frozen}"/>'
+    )
+    dots.append(
+        f'<circle class="late-proposal-dot" cx="560" cy="205" r="6" fill="{STATUS["critical"]}" style="animation:late_proposal_dot 14s linear infinite;{frozen}"/>'
     )
 
     # Continuous fainter dots on downstream paths (r 5)
     for i in range(4):
         d_offset = delay(i * 0.875, freeze_at)
         dots.append(
-            f'<circle class="faint-dot" cx="720" cy="346" r="5" fill="{BLUE[mode]}" style="animation:flow_dec_1 3.5s linear infinite;{d_offset}"/>'
+            f'<circle class="faint-dot" cx="720" cy="346" r="5" fill="{CATEGORICAL["aqua"][mode]}" style="animation:flow_dec_1 3.5s linear infinite;{d_offset}"/>'
         )
         dots.append(
-            f'<circle class="faint-dot" cx="1000" cy="346" r="5" fill="{BLUE[mode]}" style="animation:flow_dec_2 3.5s linear infinite;{d_offset}"/>'
+            f'<circle class="faint-dot" cx="1000" cy="346" r="5" fill="{CATEGORICAL["aqua"][mode]}" style="animation:flow_dec_2 3.5s linear infinite;{d_offset}"/>'
         )
 
         l_offset = delay(i * 0.875 + 0.4375, freeze_at)
         dots.append(
-            f'<circle class="faint-dot" cx="720" cy="425" r="5" fill="{BLUE[mode]}" style="animation:flow_life_1 3.5s linear infinite;{l_offset}"/>'
+            f'<circle class="faint-dot" cx="720" cy="425" r="5" fill="{CATEGORICAL["orange"][mode]}" style="animation:flow_life_1 3.5s linear infinite;{l_offset}"/>'
         )
         dots.append(
-            f'<circle class="faint-dot" cx="1000" cy="425" r="5" fill="{BLUE[mode]}" style="animation:flow_life_2 3.5s linear infinite;{l_offset}"/>'
+            f'<circle class="faint-dot" cx="1000" cy="425" r="5" fill="{CATEGORICAL["orange"][mode]}" style="animation:flow_life_2 3.5s linear infinite;{l_offset}"/>'
         )
 
-    # Late proposal refused label (EMBER, size 16)
+    # Late proposal refused label
     late_label_glyphs = out.run(face["body"], "late proposal refused", 435, 240, 16, anchor="middle")
     late_label_elem = (
-        f'<g class="late-proposal-label" fill="{EMBER[mode]}" style="animation:late_label 14s linear infinite;{frozen}">{late_label_glyphs}</g>'
+        f'<g class="late-proposal-label" fill="{STATUS["critical"]}" style="animation:late_label 14s linear infinite;{frozen}">{late_label_glyphs}</g>'
     )
 
     css = (
@@ -356,8 +375,8 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
         f"{title}. {subtitle} "
         "In a 14 s loop, blue dots travel replayer to gateway, through Kafka auth.requests to Flink, "
         "and return through Kafka auth.proposals to the gateway and PostgreSQL, where they settle. "
-        "Continuous fainter dots flow along decisions through Druid to Superset and lifecycle through Spark to Hudi on SeaweedFS. "
-        "Once per loop one scoring proposal is ember and arrives after its transaction's decision is stored: "
+        "Continuous fainter aqua dots flow along decisions through Druid to Superset and orange dots along lifecycle through Spark to Hudi on SeaweedFS. "
+        "Once per loop one scoring proposal is critical red and arrives after its transaction's decision is stored: "
         "it stops at the gateway with a late proposal refused label that fades after 2 s."
     )
 

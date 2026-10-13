@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from figures.swipeline import build
-from figkit.color import FAINT, INK, MUTED
+from figkit.color import CATEGORICAL, STATUS, FAINT, INK, MUTED
 
 NS = {"s": "http://www.w3.org/2000/svg"}
 
@@ -177,6 +177,13 @@ def test_render_nodes_and_styling(mode):
     topic_group = root.find(".//s:g[@class='bus-topics']", NS)
     assert topic_group is not None
     assert topic_group.attrib["fill"] == MUTED[mode]
+    topics = list(topic_group)
+    assert [g.attrib["aria-label"] for g in topics] == [
+        "auth.requests", "auth.proposals", "decisions.raw", "decisions", "lifecycle",
+    ]
+    assert [g.attrib["fill"] for g in topics] == [
+        CATEGORICAL[hue][mode] for hue in ("blue", "blue", "aqua", "aqua", "orange")
+    ]
 
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
@@ -189,8 +196,13 @@ def test_render_edges_and_arrows(mode):
     edge_elements = edges_group.findall("./*")
     assert len(edge_elements) == len(build.get_edges())
 
-    for elem in edge_elements:
-        assert elem.attrib["stroke"] == MUTED[mode]
+    hues = ["blue"] * 6 + ["aqua"] * 5 + ["orange"] * 3
+    for elem, hue in zip(edge_elements, hues):
+        assert elem.attrib["stroke"] == CATEGORICAL[hue][mode]
+        marker_id = elem.attrib["marker-end"][5:-1]
+        marker = root.find(f".//s:marker[@id='{marker_id}']/s:path", NS)
+        assert marker is not None
+        assert marker.attrib["fill"] == CATEGORICAL[hue][mode]
         assert float(elem.attrib["stroke-width"]) == 2.5
         assert "marker-end" in elem.attrib
 
@@ -213,20 +225,20 @@ def test_animation_loop_and_keyframes(mode):
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_animated_dots_specification(mode):
-    from figkit.color import BLUE, EMBER
+    from figkit.color import CATEGORICAL, STATUS
     svg = build.render({}, mode)
     root = ET.fromstring(svg)
 
-    # BLUE moving dots (r 6)
-    blue_dots = root.findall(f".//s:circle[@fill='{BLUE[mode]}']", NS)
+    # Authorization dots
+    blue_dots = root.findall(f".//s:circle[@fill='{CATEGORICAL['blue'][mode]}']", NS)
     assert len(blue_dots) >= 1
     for d in blue_dots:
         if d.attrib.get("class") == "faint-dot":
             continue
         assert float(d.attrib["r"]) == 6.0
 
-    # EMBER proposal dot (r 6)
-    ember_dots = root.findall(f".//s:circle[@fill='{EMBER[mode]}']", NS)
+    # Late proposal dots
+    ember_dots = root.findall(f".//s:circle[@fill='{STATUS['critical']}']", NS)
     assert len(ember_dots) >= 1
     assert any(float(d.attrib["r"]) == 6.0 for d in ember_dots)
 
@@ -238,12 +250,12 @@ def test_animated_dots_specification(mode):
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_late_proposal_refused_label(mode):
-    from figkit.color import EMBER
+    from figkit.color import STATUS
     svg = build.render({}, mode)
     root = ET.fromstring(svg)
     label_group = root.find(".//s:g[@class='late-proposal-label']", NS)
     assert label_group is not None
-    assert label_group.attrib["fill"] == EMBER[mode]
+    assert label_group.attrib["fill"] == STATUS["critical"]
 
 
 def test_settled_dots_at_postgresql():
@@ -321,3 +333,45 @@ def test_marks_scale_with_the_larger_labels(mode):
     for marker in root.findall(".//s:marker", NS):
         assert float(marker.attrib["markerWidth"]) >= 10.0
         assert float(marker.attrib["markerHeight"]) >= 10.0
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_node_accents_follow_routes_and_leave_shared_bus_neutral(mode):
+    root = ET.fromstring(build.render({}, mode))
+    accents = root.findall(".//s:rect[@class='node-accent']", NS)
+    expected = {
+        "replayer": ["blue"], "PostgreSQL": ["blue"],
+        "Flink": ["blue", "aqua"], "Druid": ["aqua"], "Superset": ["aqua"],
+        "Spark batch": ["orange"], "Hudi on SeaweedFS": ["orange"],
+    }
+    assert len(accents) == 8
+    for name, hues in expected.items():
+        bars = [bar for bar in accents if bar.attrib["aria-label"] == name]
+        assert [bar.attrib["fill"] for bar in bars] == [CATEGORICAL[h][mode] for h in hues]
+        node = build.get_nodes()[name]
+        assert sum(float(bar.attrib["width"]) for bar in bars) == node.width - 2 * node.rx
+        for bar in bars:
+            assert float(bar.attrib["height"]) == 2
+            assert float(bar.attrib["y"]) == node.y
+            assert node.x + node.rx <= float(bar.attrib["x"]) < node.x + node.width - node.rx
+    assert not any(bar.attrib["aria-label"] in ("gateway", "Kafka") for bar in accents)
+    assert root.find(".//s:g[@class='node-names']", NS).attrib["fill"] == INK[mode]
+    assert root.find(".//s:g[@class='node-subtitles']", NS).attrib["fill"] == MUTED[mode]
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_travelling_dots_keep_their_route_or_refusal_colour(mode):
+    root = ET.fromstring(build.render({}, mode, freeze_at=10))
+    for dot in root.findall(".//s:circle", NS):
+        animation = dot.attrib["style"].split()[0]
+        if "flow_dec" in animation:
+            expected = CATEGORICAL["aqua"][mode]
+        elif "flow_life" in animation:
+            expected = CATEGORICAL["orange"][mode]
+        elif "t2_prop" in animation or "late_proposal" in animation:
+            expected = STATUS["critical"]
+        else:
+            expected = CATEGORICAL["blue"][mode]
+        assert dot.attrib["fill"] == expected
+    desc = root.find("s:desc", NS).text
+    assert "aqua" in desc and "orange" in desc and "critical" in desc
