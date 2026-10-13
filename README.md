@@ -87,15 +87,14 @@ Per-machine models of Linux power consumption, used to estimate which applicatio
 
 ## Tools for real work
 
-**[ORCA](https://github.com/VivianSobers/ORCA)** reads an unfamiliar repository, identifies its services, and generates a Docker setup with evidence behind each decision. Available as [`orca-agent-cli`](https://www.npmjs.com/package/orca-agent-cli).
+**[ORCA](https://github.com/VivianSobers/ORCA)** reads an unfamiliar repository, identifies its services and generates a Docker setup with evidence behind each decision. It is published as [`orca-agent-cli`](https://www.npmjs.com/package/orca-agent-cli).
 
-**[Private Cloud](https://github.com/VivianSobers/Private-Cloud)** is a team-built, self-hosted file and photo platform. My focus: the **web client, media pipeline, and intelligence tier**, including OCR, semantic search, and photo features.
+**[Private Cloud](https://github.com/VivianSobers/Private-Cloud)** is a team-built, self-hosted file and photo platform. I work on the web client, the media pipeline and the intelligence tier, including OCR, semantic search and photo features.
 
 ---
 
-**Languages I work with:** Go, Python, Rust, TypeScript, C, Elixir, and Gleam.  
+**Languages I work with:** Go, Python, Rust, TypeScript, C, Elixir and Gleam.  
 **Problems I keep coming back to:** recovery, reproducibility, observability, and understanding what a model actually computes.
-
 <!-- header:start -->
 <details>
 <summary>How the header was made</summary>
