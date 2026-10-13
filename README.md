@@ -25,11 +25,17 @@ Inject a fault, check that the Prometheus alert fires and reaches the right rece
 
 <sub>Go · Prometheus · Alertmanager · Kubernetes · Helm · Terraform · Ansible</sub>
 
-### [swipeline](https://github.com/VivianSobers/swipeline) — A payment network on one machine
+### [swipeline](https://github.com/VivianSobers/swipeline): a payment network on one machine
 
-Repeatable synthetic card traffic, durable authorization decisions, and streaming analytics. PostgreSQL records the final outcome; Kafka and Flink handle scoring; Druid and Superset make the network observable. Late scoring proposals cannot overwrite a decision already made.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/swipeline/swipeline-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/swipeline/swipeline-light.svg">
+  <img alt="Diagram of swipeline. The replayer sends card traffic to the gateway, which stores final decisions in PostgreSQL. A relay publishes to Kafka; Flink reads auth.requests and answers on auth.proposals, and canonicalizes decisions.raw into decisions. Druid ingests decisions for Superset, and Spark batch turns lifecycle events into Hudi ledger tables on SeaweedFS. A proposal that arrives after the decision is stored is refused." src="figures/swipeline/swipeline-light.svg" width="100%">
+</picture>
 
-<sub>Go · PostgreSQL · Kafka · Flink · Druid · Superset</sub>
+Repeatable synthetic card traffic, durable authorization decisions and streaming analytics. PostgreSQL records the final outcome, Kafka and Flink handle scoring, and Druid and Superset make the network observable. A scoring proposal that misses its deadline cannot overwrite a decision already made.
+
+<sub>Go · PostgreSQL · Kafka · Flink · Druid · Superset · Spark · Hudi</sub>
 
 ### [gavel](https://github.com/VivianSobers/gavel) — Auctions on the BEAM
 
