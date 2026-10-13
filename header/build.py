@@ -148,7 +148,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     out = Outliner()
 
     token_marks = "".join(
-        out.run(face["token"], token, cell_center(k, k, geometry)[0], geometry.base + 24, 15, "middle")
+        out.run(face["token"], token, cell_center(k, k, geometry)[0], geometry.base + 26, 16, "middle")
         for k, token in enumerate(tokens)
     )
     lattice = "".join(
@@ -156,7 +156,6 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     )
 
     cells, labels, head_names = [], [], []
-    name_x = geometry.margin
     for s, head in enumerate(heads):
         for i, row in enumerate(head["pattern"]):
             marks = "".join(
@@ -167,19 +166,20 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             if marks:
                 cells.append(f'<g class="c s{s}" style="{delay(row_delay(s, i, timing), freeze_at)}">{marks}</g>')
         role, meaning, measure = ROLE_TEXT[head["role"]]
-        small_name = out.run(face["body"], role, name_x, 124, 13)
+        head_x = geometry.margin if s % 2 == 0 else geometry.margin + 145
+        head_y = 134 if s < 2 else 160
+        small_name = out.run(face["body"], role, head_x, head_y, 16)
         head_names.append(
             f'<g aria-label="{role}" fill="{MUTED[mode]}">{small_name}'
             f'<g class="l s{s}" fill="{INK[mode]}" style="{delay(s * timing.scene, freeze_at)}">'
             f'{small_name}</g></g>'
         )
-        name_x += face["body"].advance(role, 13) + 16
         ink = out.run(face["title"], role, right, 66, 22, "end")
         ink += out.run(face["body"], f"Layer {head['layer']}, head {head['head']}", right, 93, 16, "end")
         muted = "".join(
-            out.run(face["body"], line, right, 122 + 22 * k, 15, "end") for k, line in enumerate(meaning)
+            out.run(face["body"], line, right, 122 + 24 * k, 16, "end") for k, line in enumerate(meaning)
         )
-        muted += out.run(face["body"], f"{measure}: {head['score']:.2f}", right, 130 + 22 * len(meaning), 15, "end")
+        muted += out.run(face["body"], f"{measure}: {head['score']:.2f}", right, 126 + 24 * len(meaning), 16, "end")
         labels.append(
             f'<g class="l s{s}" style="{delay(s * timing.scene, freeze_at)}">'
             f'<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g></g>'
@@ -190,12 +190,12 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<path d="{_polygon(_legend_points(right - 8 - 20 * (6 - k), legend_y))}" fill="{ramp_color(k / 6, mode)}"/>'
         for k in range(7)
     )
-    legend_text = out.run(face["body"], "Attention weight", right, legend_y - 16, 13, "end")
+    legend_text = out.run(face["body"], "Attention weight", right, legend_y - 18, 16, "end")
     for k, label in ((0, "0"), (3, "0.25"), (6, "1")):
-        legend_text += out.run(face["body"], label, right - 8 - 20 * (6 - k), legend_y + 22, 12, "middle")
+        legend_text += out.run(face["body"], label, right - 8 - 20 * (6 - k), legend_y + 26, 16, "middle")
 
     name = out.run(face["name"], "Vivian Sobers", geometry.margin, 72, 44, "start")
-    caption = out.run(face["body"], "Qwen3-0.6B reading the line below, twice", geometry.margin, 102, 15, "start")
+    caption = out.run(face["body"], "Qwen3-0.6B reading the line below, twice", geometry.margin, 104, 18, "start")
 
     fade = 100 * timing.fade / timing.loop
     hold = 100 * timing.scene / timing.loop

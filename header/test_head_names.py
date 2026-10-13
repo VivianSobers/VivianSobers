@@ -25,23 +25,46 @@ def test_head_names_form_one_small_row_below_caption_without_changing_height(mod
     assert root.attrib["height"] == "461"
     groups = names(root)
     assert [group.attrib["aria-label"] for group in groups] == NAMES
-    last = 40.0
     face = build.faces()["body"]
-    for group, name in zip(groups, NAMES):
+    for idx, (group, name) in enumerate(zip(groups, NAMES)):
         uses = group.findall("svg:use", NS)
-        glyphs, _ = face.shape(name, 13)
+        glyphs, _ = face.shape(name, 16)
         expected = [face.outline(glyph.name) for glyph in glyphs if face.outline(glyph.name)]
         actual = [root.find(f"svg:defs/svg:path[@id='{use.attrib['href'][1:]}']", NS).attrib["d"]
                   for use in uses]
         assert actual == expected
         positions = [re.match(r"translate\(([-\d.]+) ([-\d.]+)\) scale\(([-\d.]+)", use.attrib["transform"])
                      for use in uses]
-        assert all(float(pos[2]) == 124 for pos in positions)
-        assert all(float(pos[3]) == pytest.approx(13 / face.units_per_em, abs=0.000005) for pos in positions)
+        expected_y = 134 if idx in (0, 1) else 160
+        assert all(float(pos[2]) == expected_y for pos in positions)
+        assert all(float(pos[3]) == pytest.approx(16 / face.units_per_em, abs=0.000005) for pos in positions)
         left = float(positions[0][1])
-        assert left >= last
-        last = left + face.advance(name, 13)
-    assert last < 488
+        expected_x = 40.0 if idx in (0, 2) else 185.0
+        assert left == pytest.approx(expected_x, abs=0.5)
+        right = left + face.advance(name, 16)
+        assert right < 350
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_text_is_readable_and_has_room_at_readme_width(monkeypatch, mode):
+    runs = []
+    original = build.Outliner.run
+
+    def capture(self, face, text, x, y, size, anchor="start"):
+        width = face.advance(text, size)
+        left = x - {"start": 0, "middle": width / 2, "end": width}[anchor]
+        runs.append((text, size, (left, y - size, left + width, y + size / 4)))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(build.Outliner, "run", capture)
+    build.render(DATA, mode, freeze_at=7.5)
+    assert all(size >= 16 for _, size, _ in runs)
+    caption_run = next(run for run in runs if run[0].startswith("Qwen3-0.6B"))
+    assert caption_run[1] == 18
+    for text, _, (left, top, right, bottom) in runs:
+        assert 35 <= left and right <= 1245, text
+        assert 0 <= top and bottom <= 461, text
+
 
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
