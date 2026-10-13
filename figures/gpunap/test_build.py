@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -78,7 +79,10 @@ def test_static_final_state_and_accessible_description(mode):
     assert "4 single-GPU NCCL, 1 managed memory" in desc
     blue = {"light": "#256abf", "dark": "#3987e5"}[mode]
     assert all(cell.get("fill") == blue for cell in svg.findall(".//s:rect[@class='cycle']", NS))
-    assert "@keyframes" not in svg.find("s:style", NS).text
+    assert "@keyframes" in svg.find("s:style", NS).text
+    counters = svg.findall(".//s:g[@class='counter']", NS)
+    assert [int(group.get("data-count")) for group in counters if group.get("opacity") == "1"] == [388]
+    assert "@media (prefers-reduced-motion:reduce){*{animation:none!important}}" in svg.find("s:style", NS).text
     assert svg.find("s:text", NS) is None
 
 
@@ -137,3 +141,81 @@ def test_canvas_and_following_rows_grow_when_another_workload_wraps():
     assert svg.get("viewBox") == "0 0 1280 397"
     note = svg.findall("s:g", NS)[1].findall("s:use", NS)[-1]
     assert float(note.get("transform").split(")")[0].split()[-1]) == 377
+
+
+def frames(css, name):
+    body = re.search(r"@keyframes " + name + r"\{((?:[^{}]*\{[^{}]*\})+)\}", css).group(1)
+    return [(float(at), dict(item.split(":") for item in props.split(";") if item))
+            for at, props in re.findall(r"([\d.]+)%\{([^{}]*)\}", body)]
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_cells_pause_for_point_four_seconds_in_a_left_to_right_sweep(mode):
+    svg, _ = drawing(mode)
+    css = svg.find("s:style", NS).text
+    cells = svg.findall(".//s:rect[@class='cycle']", NS)
+    ember = {"light": "#d9622b", "dark": "#e0702f"}[mode]
+    events = []
+    for cell in cells:
+        name = re.search(r"animation:(\w+) ([\d.]+)s steps\(1,end\) infinite", cell.get("style", ""))
+        assert name, "each cell needs a discrete pause/resume animation"
+        loop = float(name[2])
+        assert 12 <= loop <= 20
+        keys = frames(css, name[1])
+        paused = next(at for at, props in keys if props.get("fill") == ember)
+        resumed = next(at for at, props in keys if at > paused and props.get("fill") == cell.get("fill"))
+        assert (resumed - paused) * loop / 100 == pytest.approx(0.4, abs=0.00002)
+        assert keys[0][1]["opacity"] == "0.18"
+        assert keys[-1][1] == {"fill": cell.get("fill"), "opacity": "1"}
+        events.append((paused, float(cell.get("x")), resumed))
+    events.sort()
+    assert [x for _, x, _ in events] == sorted(x for _, x, _ in events)
+    assert events[-1][2] * loop / 100 < loop - 3
+
+
+def test_counter_steps_match_every_resumed_cell_and_only_one_value_is_visible():
+    svg, data = drawing()
+    css = svg.find("s:style", NS).text
+    counters = svg.findall(".//s:g[@class='counter']", NS)
+    total = sum(row["completed_cycles"] for row in data["rows"])
+    assert [int(group.get("data-count")) for group in counters] == list(range(total + 1))
+    resumes = []
+    for cell in svg.findall(".//s:rect[@class='cycle']", NS):
+        name = re.search(r"animation:(\w+)", cell.get("style"))[1]
+        resumes.append(frames(css, name)[-2][0])
+    resumes.sort()
+    intervals = []
+    for value, group in enumerate(counters):
+        assert group.findall("s:use", NS), "counter numbers must be outlined"
+        name = re.search(r"animation:(\w+) [\d.]+s steps\(1,end\) infinite", group.get("style"))[1]
+        keys = frames(css, name)
+        start = next(at for at, props in keys if props["opacity"] == "1")
+        end = next((at for at, props in keys if at > start and props["opacity"] == "0"), 100)
+        assert start == (0 if value == 0 else resumes[value - 1])
+        assert end == (100 if value == total else resumes[value])
+        intervals.append((start, end))
+    assert all(a[1] == b[0] for a, b in zip(intervals, intervals[1:]))
+    assert svg.find(".//s:script", NS) is None
+
+
+def test_animated_counter_tracks_changed_data_and_stays_below_size_limit():
+    data = copy.deepcopy(json.loads((HERE / "data.json").read_text()))
+    data["rows"][0]["completed_cycles"] += 1
+    svg, _ = drawing(data=data)
+    counters = svg.findall(".//s:g[@class='counter']", NS)
+    assert len(counters) == 390
+    assert counters[-1].get("data-count") == "389"
+    from figures.gpunap import build
+    for mode in ("light", "dark"):
+        assert len(build.render(data, mode).encode()) < 400_000
+
+
+def test_every_animation_freezes_on_the_same_clock_and_loop_fades_seamlessly():
+    svg, _ = drawing(freeze_at=7.5)
+    css = svg.find("s:style", NS).text
+    animated = [element for element in svg.iter() if "animation:" in element.get("style", "")]
+    assert len(animated) >= 777
+    assert all("animation-delay:-7.500s" in element.get("style") for element in animated)
+    scene = frames(css, "sweep")
+    assert scene[0][1] == scene[-1][1] == {"opacity": "0"}
+    assert any(props == {"opacity": "1"} for _, props in scene)

@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, INK, MUTED
-from figkit.svg import document
+from figkit.color import BLUE, EMBER, INK, MUTED
+from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
@@ -82,40 +82,91 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     face, out = faces(), Outliner()
     heading = out.run(face["title"], title, 40, 44, 22)
     muted = out.run(face["body"], subtitle, 40, 70, 15)
-    workloads, descriptions = [], []
+    workloads, descriptions, positioned = [], [], []
     y = geometry.top
     for kind, name, runs in groups:
         placed = layout(runs, y, geometry)
+        positioned.append((kind, name, runs, placed, y))
+        y = max(cell_y for _, _, cell_y in placed) + geometry.cell + geometry.gap + geometry.row_gap
+    positions = sorted(
+        (x + cycle * (geometry.cell + geometry.gap), cell_y)
+        for _, _, _, placed, _ in positioned for run, x, cell_y in placed
+        for cycle in range(run["completed_cycles"])
+    )
+    loop = 17
+    starts = [0.5 + 11.5 * index / max(total - 1, 1) for index in range(total)]
+    resumes = [100 * (start + 0.4) / loop for start in starts]
+    ranks = {position: index for index, position in enumerate(positions)}
+    clock = delay(0, freeze_at)
+    sweep = f"animation:sweep {loop}s ease-in-out infinite;{clock}"
+    css = [
+        "@keyframes sweep{0%{opacity:0}2.94118%{opacity:1}94.11765%{opacity:1}100%{opacity:0}}"
+    ]
+    for index, start in enumerate(starts):
+        css.append(
+            f"@keyframes pause{index}{{0%{{fill:{BLUE[mode]};opacity:0.18}}"
+            f"{100 * start / loop:.5f}%{{fill:{EMBER[mode]};opacity:1}}"
+            f"{resumes[index]:.5f}%{{fill:{BLUE[mode]};opacity:1}}"
+            f"100%{{fill:{BLUE[mode]};opacity:1}}}}"
+        )
+    counters = []
+    for count in range(total + 1):
+        start = resumes[count - 1] if count else 0
+        end = resumes[count] if count < total else 100
+        keys = "0%{opacity:0}" if count else ""
+        keys += f"{start:.5f}%{{opacity:1}}"
+        if count < total:
+            keys += f"{end:.5f}%{{opacity:0}}100%{{opacity:0}}"
+        else:
+            keys += "100%{opacity:1}"
+        css.append(f"@keyframes count{count}{{{keys}}}")
+        glyphs = out.run(face["number"], str(count), 1160, 44, 20, "end")
+        counters.append(
+            f'<g class="counter" data-count="{count}" opacity="{int(count == total)}" '
+            f'style="animation:count{count} {loop}s steps(1,end) infinite;{clock}">{glyphs}</g>'
+        )
+    counter = (
+        f'<g fill="{INK[mode]}" style="{sweep}">{"".join(counters)}'
+        f'{out.run(face["body"], "resumed", 1240, 44, 15, "end")}</g>'
+    )
+    for kind, name, runs, placed, row_y in positioned:
         count = sum(run["completed_cycles"] for run in runs)
         summary = f"{count} cycles, {len(runs)} runs"
-        labels = out.run(face["number"], short.get(kind, name), 40, y + geometry.cell, 13)
-        labels += out.run(face["number"], summary, 1240, y + geometry.cell, 13, "end")
+        labels = out.run(face["number"], short.get(kind, name), 40, row_y + geometry.cell, 13)
+        labels += out.run(face["number"], summary, 1240, row_y + geometry.cell, 13, "end")
         marks = []
         for run, x, cell_y in placed:
-            cells = "".join(
-                f'<rect class="cycle" x="{x + cycle * (geometry.cell + geometry.gap):g}" '
-                f'y="{cell_y:g}" width="{geometry.cell:g}" height="{geometry.cell:g}" fill="{BLUE[mode]}"/>'
-                for cycle in range(run["completed_cycles"])
+            cells = []
+            for cycle in range(run["completed_cycles"]):
+                cell_x = x + cycle * (geometry.cell + geometry.gap)
+                index = ranks[cell_x, cell_y]
+                cells.append(
+                    f'<rect class="cycle" x="{cell_x:g}" y="{cell_y:g}" '
+                    f'width="{geometry.cell:g}" height="{geometry.cell:g}" fill="{BLUE[mode]}" '
+                    f'style="animation:pause{index} {loop}s steps(1,end) infinite;{clock}"/>'
+                )
+            marks.append(
+                f'<g class="run" data-gpu={quoteattr(run["gpu"])} data-tag={quoteattr(run["tag"])} '
+                f'style="{sweep}">{"".join(cells)}</g>'
             )
-            marks.append(f'<g class="run" data-gpu={quoteattr(run["gpu"])} data-tag={quoteattr(run["tag"])}>{cells}</g>')
         workloads.append(
             f'<g class="workload" data-workload={quoteattr(name)}>'
             f'<g fill="{MUTED[mode]}">{labels}</g>{"".join(marks)}</g>'
         )
         descriptions.append(f"{name}: {summary}")
-        y = max(cell_y for _, _, cell_y in placed) + geometry.cell + geometry.gap + geometry.row_gap
     note_y = y + 13
     height = note_y + 20
     muted += out.run(face["body"], note, 40, note_y, 13)
     body = (
         f'<g fill="{INK[mode]}">{heading}</g><g fill="{MUTED[mode]}">{muted}</g>'
-        f'{"".join(workloads)}'
+        f'{"".join(workloads)}{counter}'
     )
     return document(
         geometry.width, height, title,
         f"{subtitle} One blue square per completed bit-exact pause/resume cycle; "
-        f"gaps separate runs. {'; '.join(descriptions)}. {note}",
-        "", out.defs(), body, freeze_at,
+        f"gaps separate runs. Cells sweep left to right, orange while paused for 0.4 seconds, "
+        f"then blue on resume; the counter counts completed resumes. {'; '.join(descriptions)}. {note}",
+        "".join(css), out.defs(), body, freeze_at,
     )
 
 
