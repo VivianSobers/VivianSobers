@@ -28,9 +28,9 @@ def faces():
 
 
 def layout(data):
-    chips = [(40, 112 + index * 54, 280, 44) for index in range(len(data['requests']))]
-    width = (390 - 2 * (len(data['events']) - 1)) / len(data['events'])
-    cells = [(850 + index * (width + 2), 165, width, 88)
+    chips = [(40, 112 + index * 58, 280, 50) for index in range(len(data['requests']))]
+    width = (460 - 2 * (len(data['events']) - 1)) / len(data['events'])
+    cells = [(780 + index * (width + 2), 165, width, 88)
              for index in range(len(data['events']))]
     return chips + [(425, 165, 300, 88)] + cells
 
@@ -38,20 +38,20 @@ def layout(data):
 def render(data, mode, freeze_at=None):
     face, out = faces(), Outliner()
 
-    def text(label, x, y, size=15, kind='body', color=None, anchor='start'):
+    def text(label, x, y, size=16, kind='body', color=None, anchor='start'):
         return (f'<g fill="{color or INK[mode]}">'
                 f'{out.run(face[kind], label, x, y, size, anchor)}</g>')
 
     def box(x, y, w, h, color):
         return (f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="8" '
-                f'fill="{color}" fill-opacity="0.08" stroke="{color}" stroke-width="1"/>')
+                f'fill="{color}" fill-opacity="0.08" stroke="{color}" stroke-width="1.5"/>')
 
     title = 'Every auction is one ordered log'
     subtitle = 'Gleam decides, Elixir serializes, PostgreSQL fences each append on (auction, seq).'
-    body = [text(title, 40, 44, 22, 'title'), text(subtitle, 40, 70, color=MUTED[mode])]
-    body += [text('Incoming bids', 40, 102, 13, color=MUTED[mode]),
-             text('One auction process', 425, 143, 13, color=MUTED[mode]),
-             text('PostgreSQL event log', 850, 143, 13, color=MUTED[mode])]
+    body = [text(title, 40, 44, 26, 'title'), text(subtitle, 40, 72, 18, color=MUTED[mode])]
+    body += [text('Incoming bids', 40, 102, 16, color=MUTED[mode]),
+             text('One auction process', 425, 145, 16, color=MUTED[mode]),
+             text('PostgreSQL event log', 780, 145, 16, color=MUTED[mode])]
     css = ['.log-cell,.rejection,.duplicate{opacity:1}', '.traveler{opacity:0}']
 
     def keyframes(name, points):
@@ -71,10 +71,19 @@ def render(data, mode, freeze_at=None):
                          (decision, 'opacity:1'), (13.25, 'opacity:1'), (14, 'opacity:0')])
     boxes = layout(data)
     chip_boxes = boxes[:len(data['requests'])]
-    body.append(f'<g style="{style("rules")}"><path d="M320 134H375V296H320M375 209H425M725 209H850" '
-                f'fill="none" stroke="{MUTED[mode]}" stroke-width="2" stroke-linecap="round"/>'
-                f'<path d="M417 205L425 209L417 213M842 205L850 209L842 213" '
-                f'fill="none" stroke="{MUTED[mode]}" stroke-width="2" stroke-linecap="round"/></g>')
+    process_box = boxes[len(data['requests'])]
+    cell_boxes = boxes[len(data['requests']) + 1:]
+
+    y_top = chip_boxes[0][1] + chip_boxes[0][3] / 2
+    y_bot = chip_boxes[-1][1] + chip_boxes[-1][3] / 2
+    x_proc = process_box[0]
+    x_proc_end = process_box[0] + process_box[2]
+    x_log = cell_boxes[0][0]
+
+    body.append(f'<g style="{style("rules")}"><path d="M320 {y_top:g}H375V{y_bot:g}H320M375 209H{x_proc:g}M{x_proc_end:g} 209H{x_log:g}" '
+                f'fill="none" stroke="{MUTED[mode]}" stroke-width="2.5" stroke-linecap="round"/>'
+                f'<path d="M{x_proc - 10:g} 204L{x_proc:g} 209L{x_proc - 10:g} 214M{x_log - 10:g} 204L{x_log:g} 209L{x_log - 10:g} 214" '
+                f'fill="none" stroke="{MUTED[mode]}" stroke-width="2.5" stroke-linecap="round"/></g>')
     travelers = []
     for index, (row, (x, y, w, h)) in enumerate(zip(data['requests'], chip_boxes)):
         color = EMBER[mode] if row['outcome'] == 'rejected' else BLUE[mode]
@@ -97,25 +106,26 @@ def render(data, mode, freeze_at=None):
                                  (13.25, 'opacity:1'), (14, 'opacity:0.25')])
         travelers.append(f'<g class="traveler" data-outcome="{row["outcome"]}" '
                          f'style="{style(f"travel{index}")}" aria-hidden="true">'
-                         f'{box(x, y, w, h, color)}{text(label, x + 12, y + 17, 14, "number")}</g>')
+                         f'{box(x, y, w, h, color)}{text(label, x + 14, y + 20, 16, "number")}</g>')
         body.append(f'<g class="bid-chip" style="{style(f"chip{index}")}" aria-label={quoteattr(label + ": " + outcome)}>'
-                    f'{box(x, y, w, h, color)}{text(label, x + 12, y + 19, 14, "number")}'
-                    f'{text(outcome, x + 12, y + 36, 13, color=color)}</g>')
-        if 134 < y + h / 2 < 296:
-            body.append(f'<path style="{style("rules")}" d="M320 {y + h / 2:g}H375" stroke="{MUTED[mode]}" stroke-width="2"/>')
+                    f'{box(x, y, w, h, color)}{text(label, x + 14, y + 20, 16, "number")}'
+                    f'{text(outcome, x + 14, y + 43, 16, color=color)}</g>')
+        if y_top < y + h / 2 < y_bot:
+            body.append(f'<path style="{style("rules")}" d="M320 {y + h / 2:g}H375" stroke="{MUTED[mode]}" stroke-width="2.5"/>')
     process_frames = [(0, 'opacity:1')]
     for index in range(len(data['requests'])):
         start = 0.6 + index * 2.4
         process_frames += [(start, 'opacity:1'), (start + 0.1, 'opacity:0'),
                            (start + 1.4, 'opacity:0'), (start + 1.7, 'opacity:1')]
     keyframes('rules', process_frames + [(14, 'opacity:1')])
-    body += [box(425, 165, 300, 88, FAINT[mode]),
+    x_proc_mid = x_proc + process_box[2] / 2
+    body += [box(process_box[0], process_box[1], process_box[2], process_box[3], FAINT[mode]),
              f'<g style="{style("rules")}">',
-             text('Auction process', 575, 191, anchor='middle'),
-             text('(Gleam rules)', 575, 215, anchor='middle'),
-             text('Elixir GenServer', 575, 238, 13, color=MUTED[mode], anchor='middle'), '</g>']
+             text('Auction process', x_proc_mid, 192, 16, anchor='middle'),
+             text('(Gleam rules)', x_proc_mid, 216, 16, anchor='middle'),
+             text('Elixir GenServer', x_proc_mid, 240, 16, color=MUTED[mode], anchor='middle'), '</g>']
     descriptions = []
-    for event, (x, y, w, h) in zip(data['events'], boxes[len(data['requests']) + 1:]):
+    for event, (x, y, w, h) in zip(data['events'], cell_boxes):
         color = BLUE[mode] if event['type'] == 'bid_accepted' else MUTED[mode]
         label = f"seq {event['seq']}"
         amount = (f"{event['amount']} {data['config']['amount_unit']}"
@@ -128,9 +138,9 @@ def render(data, mode, freeze_at=None):
                          if row['outcome'] == 'accepted' and row['request_id'] == event['request_id'])
             animation = f' style="{style(decisions[index])}"'
         body.append(f'<g class="log-cell"{animation} data-seq="{event["seq"]}" aria-label={quoteattr(label + ": " + amount)}>'
-                    f'{box(x, y, w, h, color)}{text(label, x + w / 2, y + 25, 14, "number", color, "middle")}'
-                    f'{text(amount, x + w / 2, y + 51, 14, "number", anchor="middle")}'
-                    f'{text(request, x + w / 2, y + 74, 13, "number", MUTED[mode], "middle")}</g>')
+                    f'{box(x, y, w, h, color)}{text(label, x + w / 2, y + 25, 16, "number", color, "middle")}'
+                    f'{text(amount, x + w / 2, y + 49, 16, "number", anchor="middle")}'
+                    f'{text(request, x + w / 2, y + 73, 16, "number", MUTED[mode], "middle")}</g>')
     rejected = next(row for row in data['requests'] if row['outcome'] == 'rejected')
     duplicate = next(row for row in data['requests'] if row['outcome'] == 'duplicate')
     rejection = 'rejected: below minimum'
@@ -138,16 +148,16 @@ def render(data, mode, freeze_at=None):
     rejection_index = data['requests'].index(rejected)
     duplicate_index = data['requests'].index(duplicate)
     body += [f'<g class="rejection" style="{style(decisions[rejection_index])}">'
-             + text(rejection, 425, 283, 15, color=EMBER[mode])
+             + text(rejection, 425, 280, 16, color=EMBER[mode])
              + text(f"minimum {rejected['minimum']} {data['config']['amount_unit']}",
-                    425, 303, 13, 'number', MUTED[mode]) + '</g>',
+                    425, 304, 16, 'number', MUTED[mode]) + '</g>',
              f'<g class="duplicate" style="{style(decisions[duplicate_index])}">'
-             + text(returned, 850, 283, color=BLUE[mode])
+             + text(returned, x_log, 280, 16, color=BLUE[mode])
              + text(f"{duplicate['request_id']}: original bid at seq {duplicate['original_seq']}",
-                    850, 303, 13, 'number', MUTED[mode]) + '</g>',
-             text(f"Unique {data['config']['sequence_fence']}", 850, 326, 13, 'number', MUTED[mode]),
+                    x_log, 304, 16, 'number', MUTED[mode]) + '</g>',
+             text(f"Unique {data['config']['sequence_fence']}", x_log, 328, 16, 'number', MUTED[mode]),
              text('Illustrative source test fixtures. Amounts in cents; rejected bids and retries add no event.',
-                  40, 352, 13, color=MUTED[mode])]
+                  40, 360, 16, color=MUTED[mode])]
     body.extend(travelers)
     desc = (f"{data['config']['basis']}. Auction: {data['config']['auction_title']}. "
             + '; '.join(descriptions)

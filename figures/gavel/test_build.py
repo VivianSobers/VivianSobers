@@ -88,3 +88,47 @@ def test_preview_cli(tmp_path):
     previews = list((tmp_path / '.preview').glob('gavel-*.svg'))
     assert len(previews) == 6
     assert all('animation-play-state:paused' in path.read_text() for path in previews)
+
+
+@pytest.mark.parametrize('mode', ['light', 'dark'])
+def test_text_is_readable_and_has_room_at_readme_width(monkeypatch, mode):
+    runs = []
+    original = builder().Outliner.run
+
+    def capture(self, face, text, x, y, size, anchor="start"):
+        width = face.advance(text, size)
+        left = x - {"start": 0, "middle": width / 2, "end": width}[anchor]
+        runs.append((text, size, (left, y - size, left + width, y + size / 4)))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(builder().Outliner, "run", capture)
+    root = ET.fromstring(builder().render(data(), mode, freeze_at=13))
+    assert runs[0][1] == 26
+    assert runs[1][1] == 18
+    assert all(size >= 16 for _, size, _ in runs)
+    view_box = [float(v) for v in root.attrib['viewBox'].split()]
+    height = view_box[3]
+    for text, _, (left, top, right, bottom) in runs:
+        assert 40 <= left < right <= 1240, text
+        assert 0 <= top < bottom <= height - 10, text
+    # Deduplicate traveler runs which duplicate the chip label at the exact same box
+    unique_runs = []
+    for r in runs:
+        if not unique_runs or r != unique_runs[-1]:
+            unique_runs.append(r)
+    for index, (text, _, box) in enumerate(unique_runs):
+        for other, _, next_box in unique_runs[index + 1:]:
+            assert (box[2] + 2 <= next_box[0] or next_box[2] + 2 <= box[0]
+                    or box[3] + 2 <= next_box[1] or next_box[3] + 2 <= box[1]), (text, other)
+
+
+
+@pytest.mark.parametrize('mode', ['light', 'dark'])
+def test_marks_scale_with_the_larger_labels(mode):
+    root = ET.fromstring(builder().render(data(), mode))
+    paths = root.findall(".//s:path", NS)
+    connector_paths = [p for p in paths if p.attrib.get("fill") == "none" or "M320" in p.attrib.get("d", "")]
+    assert len(connector_paths) >= 2
+    for path in connector_paths:
+        assert float(path.attrib["stroke-width"]) == 2.5
+
