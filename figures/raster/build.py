@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from figkit.cli import main
 from figkit.color import BLUE, FAINT, INK, MUTED, linear_to_srgb_hex
 from figkit.svg import delay, document
-from figkit.text import Face, Outliner, power_run
+from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
 
@@ -79,7 +79,7 @@ def faces() -> dict[str, Face]:
 
 
 def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
-    target, scene, chart = Box(40, 126, 300, 300), Box(410, 126, 300, 300), Box(848, 156, 392, 226)
+    target, scene, chart = Box(40, 142, 300, 300), Box(410, 142, 300, 300), Box(848, 180, 392, 226)
     face, out = faces(), Outliner()
     count = len(data["triangles"])
     title = f"An image, rebuilt from {count} triangles by gradient descent"
@@ -87,11 +87,11 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     core_label = "one CPU core" if cores == 1 else f"{cores} CPU cores"
     subtitle = f"Soft rasterization in Rust, seed {data['config']['seed']}, {data['steps']} steps on {core_label}."
     ratio = f"loss fell {data['first_loss'] / data['best_loss']:.0f}× (best at step {data['best_iter']})"
-    heading = out.run(face["title"], title, 40, 44, 22)
-    labels = out.run(face["body"], subtitle, 40, 70, 15)
+    heading = out.run(face["title"], title, 40, 44, 26)
+    labels = out.run(face["body"], subtitle, 40, 76, 18)
     for label, x in (("Target image", target.x), ("Fitted triangles", scene.x), ("Loss (log scale)", 790)):
-        labels += out.run(face["body"], label, x, 110, 15)
-    ratio_text = out.run(face["number"], ratio, 790, 133, 13)
+        labels += out.run(face["body"], label, x, 122, 17)
+    ratio_text = out.run(face["number"], ratio, 790, 150, 16)
     png = base64.b64encode((HERE / "target.png").read_bytes()).decode("ascii")
     triangles, frames = [], []
     for i, triangle in enumerate(data["triangles"]):
@@ -115,26 +115,29 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         _, y = loss_point(0, value, data, chart)
         grid.append(
             f'<line x1="{chart.x:g}" x2="{chart.x + chart.width:g}" y1="{y:.3f}" y2="{y:.3f}" '
-            f'stroke="{FAINT[mode]}" stroke-width="1"/>'
+            f'stroke="{FAINT[mode]}" stroke-width="2.5"/>'
         )
+        exponent_text = str(exponent).replace("-", "−")
+        base_width = face["number"].advance("10", 17)
+        start = chart.x - 12 - base_width - face["number"].advance(exponent_text, 16)
         labels += (f'<g class="loss-tick" data-exponent="{exponent}" data-y="{y:.6f}">'
-                   + power_run(out, face["number"], ("10", str(exponent).replace("-", "−")),
-                               chart.x - 12, y + 4, 13, "end") + '</g>')
+                   + out.run(face["number"], "10", start, y + 5, 17)
+                   + out.run(face["number"], exponent_text, start + base_width, y + 5 - 6.8, 16) + '</g>')
     last = data["steps"] - 1
     for step in sorted(set(range(0, last + 1, 200)) | {last}):
         x, _ = loss_point(step, low, data, chart)
         grid.append(
             f'<line x1="{x:.3f}" x2="{x:.3f}" y1="{chart.y + chart.height:g}" '
-            f'y2="{chart.y + chart.height + 5:g}" stroke="{FAINT[mode]}" stroke-width="1"/>'
+            f'y2="{chart.y + chart.height + 5:g}" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
         )
         labels += (f'<g class="step-tick" data-step="{step}">'
-                   + out.run(face["number"], str(step), x, 405, 13, "middle") + '</g>')
-    labels += out.run(face["body"], "Step", chart.x + chart.width / 2, 426, 13, "middle")
-    labels += out.run(face["body"], f"Drawn in paint order; the fitter moves all {count} at once.", scene.x, 448, 13)
+                   + out.run(face["number"], str(step), x, 432, 16, "end" if step == last else "middle") + '</g>')
+    labels += out.run(face["body"], "Step", chart.x + chart.width / 2, 458, 16, "middle")
+    labels += out.run(face["body"], f"Drawn in paint order; the fitter moves all {count} at once.", scene.x, 478, 16)
     clip = f'<clipPath id="scene-box" clipPathUnits="userSpaceOnUse"><rect {rect(scene)}/></clipPath>'
     clip += (
         '<clipPath id="loss-box" clipPathUnits="userSpaceOnUse">'
-        f'<rect class="loss-reveal" {rect(Box(chart.x, chart.y - 5, chart.width + 2, chart.height + 10))} '
+        f'<rect class="loss-reveal" {rect(Box(chart.x, chart.y - 6, chart.width + 3, chart.height + 12))} '
         f'style="{delay(0, freeze_at)}"/></clipPath>'
     )
     frames.append(reveal_frames("show-best", data["best_iter"] / (data["steps"] - 1)))
@@ -154,17 +157,17 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<image {rect(target)} href="data:image/png;base64,{png}"/>'
         f'<g class="scene" clip-path="url(#scene-box)"><rect {rect(scene)} fill="{rgb(data["background"])}"/>'
         f'{"".join(triangles)}</g>'
-        f'<g fill="none" stroke="{FAINT[mode]}" stroke-width="1">'
+        f'<g fill="none" stroke="{FAINT[mode]}" stroke-width="2.5">'
         f'<rect {rect(target)}/><rect {rect(scene)}/></g>'
         f'<g stroke-linecap="round">{"".join(grid)}'
         f'<g class="loss-motion" style="{delay(0, freeze_at)}">'
-        f'<polyline class="loss" points="{points}" fill="none" stroke="{BLUE[mode]}" stroke-width="2" '
+        f'<polyline class="loss" points="{points}" fill="none" stroke="{BLUE[mode]}" stroke-width="2.5" '
         'clip-path="url(#loss-box)"/>'
-        f'<circle class="best" cx="{best_x:.3f}" cy="{best_y:.3f}" r="4" fill="{BLUE[mode]}" '
+        f'<circle class="best" cx="{best_x:.3f}" cy="{best_y:.3f}" r="5" fill="{BLUE[mode]}" '
         f'style="{delay(0, freeze_at)}"/></g></g>'
     )
     return document(
-        1280, 460, title,
+        1280, 500, title,
         f"{subtitle} Left: the {data['target']['width']} by {data['target']['height']} px target. "
         f"Middle: {count} translucent triangles in paint order on the fitted background. "
         f"Right: recorded loss on a logarithmic scale; {ratio}. "

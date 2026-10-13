@@ -43,7 +43,7 @@ def test_scene_embeds_only_target_and_preserves_triangle_paint_order(mode):
     build = builder()
     snapshot = data()
     root = ET.fromstring(build.render(snapshot, mode))
-    assert root.attrib["viewBox"] == "0 0 1280 460"
+    assert root.attrib["viewBox"] == "0 0 1280 500"
     images = root.findall(".//s:image", NS)
     assert len(images) == 1
     prefix, encoded = images[0].attrib["href"].split(",", 1)
@@ -76,9 +76,9 @@ def test_loss_curve_includes_best_step_and_all_recorded_points(mode):
     root = ET.fromstring(build.render(snapshot, mode))
     curve = root.find('.//s:polyline[@class="loss"]', NS)
     assert curve.attrib["stroke"] == BLUE[mode]
-    assert curve.attrib["stroke-width"] == "2"
+    assert curve.attrib["stroke-width"] == "2.5"
     assert curve.attrib["fill"] == "none"
-    box = build.Box(848, 156, 392, 226)
+    box = build.Box(848, 180, 392, 226)
     expected = sorted(snapshot["loss"] + [{"iter": snapshot["best_iter"], "loss": snapshot["best_loss"]}], key=lambda p: p["iter"])
     points = [tuple(map(float, point.split(","))) for point in curve.attrib["points"].split()]
     assert len(points) == len(expected)
@@ -88,7 +88,7 @@ def test_loss_curve_includes_best_step_and_all_recorded_points(mode):
     assert (float(dot.attrib["cx"]), float(dot.attrib["cy"])) == pytest.approx(
         build.loss_point(snapshot["best_iter"], snapshot["best_loss"], snapshot, box), abs=0.001)
     assert dot.attrib["fill"] == BLUE[mode]
-    assert float(dot.attrib["r"]) >= 4
+    assert float(dot.attrib["r"]) >= 5
     desc = root.find("s:desc", NS).text
     assert f"loss fell {snapshot['first_loss'] / snapshot['best_loss']:.0f}× (best at step {snapshot['best_iter']})" in desc
 
@@ -145,9 +145,9 @@ def test_loss_ticks_use_decades_and_regular_step_intervals():
         assert len(uses) == 4
         transforms = [use.attrib["transform"] for use in uses]
         baselines = [float(t.split(")")[0].split()[-1]) for t in transforms]
-        assert baselines[2:] == pytest.approx([baselines[0] - 5.2] * 2)
+        assert baselines[2:] == pytest.approx([baselines[0] - 6.8] * 2)
         y = float(tick.attrib["data-y"])
-        assert 156 <= y <= 382
+        assert 180 <= y <= 406
     ys = [float(tick.attrib["data-y"]) for tick in ticks]
     assert [a-b for a,b in zip(ys, ys[1:])] == pytest.approx([ys[0]-ys[1]] * 3)
     steps = root.findall('.//s:g[@class="step-tick"]', NS)
@@ -156,3 +156,44 @@ def test_loss_ticks_use_decades_and_regular_step_intervals():
     shorter.update(steps=401)
     root = ET.fromstring(builder().render(shorter, "light"))
     assert [int(t.attrib["data-step"]) for t in root.findall('.//s:g[@class="step-tick"]', NS)] == [0, 200, 400]
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_all_label_runs_are_readable_and_inside_canvas(monkeypatch, mode):
+    from figkit.text import Outliner, run_start
+    runs = []
+    original = Outliner.run
+
+    def record(self, face, text, x, y, size, anchor="start"):
+        runs.append((face, text, x, y, size, anchor))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(Outliner, "run", record)
+    root = ET.fromstring(builder().render(data(), mode))
+    assert runs[0][4] == 26
+    assert runs[1][4] == 18
+    assert all(run[4] >= 16 for run in runs)
+    height = float(root.attrib["height"])
+    for face, text, x, y, size, anchor in runs:
+        width = face.advance(text, size)
+        left = run_start(x, width, anchor)
+        assert left >= 40
+        assert left + width <= 1240
+        assert y - size >= 0
+        assert y + size * 0.25 <= height - 12
+    image = root.find("s:image", NS)
+    panel_top = float(image.attrib["y"])
+    panel_bottom = panel_top + float(image.attrib["height"])
+    headings = [run for run in runs if run[1] in ("Target image", "Fitted triangles")]
+    assert all(run[3] + 8 <= panel_top for run in headings)
+    footer = next(run for run in runs if run[1].startswith("Drawn in paint order"))
+    assert footer[3] - footer[4] >= panel_bottom + 12
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_all_drawn_lines_scale_with_labels(mode):
+    root = ET.fromstring(builder().render(data(), mode))
+    for element in root.findall(".//s:line", NS):
+        assert float(element.attrib["stroke-width"]) == 2.5
+    borders = root.find('.//s:g[@fill="none"]', NS)
+    assert float(borders.attrib["stroke-width"]) == 2.5
