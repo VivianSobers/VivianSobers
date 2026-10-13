@@ -155,7 +155,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         _polygon(cell_points(i, j, geometry, INSET)) for i in range(geometry.n) for j in range(i + 1)
     )
 
-    cells, labels = [], []
+    cells, labels, head_names = [], [], []
+    name_x = geometry.margin
     for s, head in enumerate(heads):
         for i, row in enumerate(head["pattern"]):
             marks = "".join(
@@ -166,6 +167,13 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             if marks:
                 cells.append(f'<g class="c s{s}" style="{delay(row_delay(s, i, timing), freeze_at)}">{marks}</g>')
         role, meaning, measure = ROLE_TEXT[head["role"]]
+        small_name = out.run(face["body"], role, name_x, 124, 13)
+        head_names.append(
+            f'<g aria-label="{role}" fill="{MUTED[mode]}">{small_name}'
+            f'<g class="l s{s}" fill="{INK[mode]}" style="{delay(s * timing.scene, freeze_at)}">'
+            f'{small_name}</g></g>'
+        )
+        name_x += face["body"].advance(role, 13) + 16
         ink = out.run(face["title"], role, right, 66, 22, "end")
         ink += out.run(face["body"], f"Layer {head['layer']}, head {head['head']}", right, 93, 16, "end")
         muted = "".join(
@@ -204,6 +212,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f"<g>{''.join(cells)}</g>"
         f'<g fill="{MUTED[mode]}">{token_marks}{caption}{legend_text}</g>'
         f'<g fill="{INK[mode]}">{name}</g>'
+        f'<g class="head-names">{"".join(head_names)}</g>'
         f"<g>{''.join(labels)}</g><g>{swatches}</g>"
     )
     return document(
