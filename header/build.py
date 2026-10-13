@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from figkit.color import INK, MUTED, RAMP, ramp_color
+from figkit.color import CATEGORICAL, INK, MUTED, RAMP, from_oklab, hue_ramp, to_oklab
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
@@ -51,6 +51,8 @@ ROLE_TEXT = {
         "Mean normalised entropy",
     ),
 }
+
+ROLE_HUES = {"first_token": "blue", "previous_token": "aqua", "induction": "magenta", "spread": "violet"}
 
 ROLE_ROWS = {
     "first_token": ("First-token head", "Mean weight on the first word"),
@@ -136,6 +138,22 @@ def _legend_points(x: float, y: float) -> tuple[tuple[float, float], ...]:
     return (x, y - h), (x + w, y), (x, y + h), (x - w, y)
 
 
+@cache
+def scene_ramp(role: str, mode: str) -> tuple[str, ...]:
+    stops = RAMP if role == "first_token" else hue_ramp(CATEGORICAL[ROLE_HUES[role]][mode])
+    return stops if mode == "light" else stops[::-1]
+
+
+def scene_color(t: float, stops: tuple[str, ...]) -> str:
+    position = min(max(t, 0.0), 1.0) * (len(stops) - 1)
+    k = min(int(position), len(stops) - 2)
+    fraction = position - k
+    if fraction in (0.0, 1.0):
+        return stops[k + int(fraction)]
+    lo, hi = to_oklab(stops[k]), to_oklab(stops[k + 1])
+    return from_oklab(*(p + (q - p) * fraction for p, q in zip(lo, hi)))
+
+
 def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     """freeze_at pauses every animation at that many seconds, for previews."""
     tokens = [token.strip() for token in data["config"]["tokens"]]
@@ -155,24 +173,27 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         _polygon(cell_points(i, j, geometry, INSET)) for i in range(geometry.n) for j in range(i + 1)
     )
 
-    cells, labels, head_names = [], [], []
+    legend_y = 238
+    cells, labels, head_names, legends = [], [], [], []
     for s, head in enumerate(heads):
+        ramp = scene_ramp(head["role"], mode)
         for i, row in enumerate(head["pattern"]):
             marks = "".join(
-                f'<path d="{_polygon(cell_points(i, j, geometry, INSET))}" fill="{ramp_color(math.sqrt(w), mode)}"/>'
+                f'<path d="{_polygon(cell_points(i, j, geometry, INSET))}" fill="{scene_color(math.sqrt(w), ramp)}"/>'
                 for j, w in enumerate(row[: i + 1])
                 if w >= THRESHOLD
             )
             if marks:
                 cells.append(f'<g class="c s{s}" style="{delay(row_delay(s, i, timing), freeze_at)}">{marks}</g>')
         role, meaning, measure = ROLE_TEXT[head["role"]]
-        head_x = geometry.margin if s % 2 == 0 else geometry.margin + 145
+        head_x = geometry.margin if s % 2 == 0 else geometry.margin + 138
         head_y = 134 if s < 2 else 160
-        small_name = out.run(face["body"], role, head_x, head_y, 16)
+        small_name = out.run(face["body"], role, head_x + 12, head_y, 16)
         head_names.append(
             f'<g aria-label="{role}" fill="{MUTED[mode]}">{small_name}'
             f'<g class="l s{s}" fill="{INK[mode]}" style="{delay(s * timing.scene, freeze_at)}">'
-            f'{small_name}</g></g>'
+            f'<path d="{_polygon(((head_x + 5, head_y - 10), (head_x + 9, head_y - 6), (head_x + 5, head_y - 2), (head_x + 1, head_y - 6)))}" '
+            f'fill="{CATEGORICAL[ROLE_HUES[head["role"]]][mode]}"/>{small_name}</g></g>'
         )
         ink = out.run(face["title"], role, right, 66, 22, "end")
         ink += out.run(face["body"], f"Layer {head['layer']}, head {head['head']}", right, 93, 16, "end")
@@ -185,11 +206,15 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             f'<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g></g>'
         )
 
-    legend_y = 238
-    swatches = "".join(
-        f'<path d="{_polygon(_legend_points(right - 8 - 20 * (6 - k), legend_y))}" fill="{ramp_color(k / 6, mode)}"/>'
-        for k in range(7)
-    )
+        swatches = "".join(
+            f'<path d="{_polygon(_legend_points(right - 8 - 20 * (6 - k), legend_y))}" fill="{color}"/>'
+            for k, color in enumerate(ramp)
+        )
+        legends.append(
+            f'<g class="legend"><g class="l s{s}" style="{delay(s * timing.scene, freeze_at)}">'
+            f'{swatches}</g></g>'
+        )
+
     legend_text = out.run(face["body"], "Attention weight", right, legend_y - 18, 16, "end")
     for k, label in ((0, "0"), (3, "0.25"), (6, "1")):
         legend_text += out.run(face["body"], label, right - 8 - 20 * (6 - k), legend_y + 26, 16, "middle")
@@ -213,7 +238,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<g fill="{MUTED[mode]}">{token_marks}{caption}{legend_text}</g>'
         f'<g fill="{INK[mode]}">{name}</g>'
         f'<g class="head-names">{"".join(head_names)}</g>'
-        f"<g>{''.join(labels)}</g><g>{swatches}</g>"
+        f"<g>{''.join(labels)}</g>{''.join(legends)}"
     )
     return document(
         geometry.width, height, "Vivian Sobers",

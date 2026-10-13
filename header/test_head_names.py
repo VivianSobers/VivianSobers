@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import build
-from figkit.color import INK, MUTED
+from figkit.color import CATEGORICAL, INK, MUTED
 
 NS = {"svg": "http://www.w3.org/2000/svg"}
 DATA = json.loads((Path(build.__file__).parent / "attention.json").read_text())
@@ -39,7 +39,7 @@ def test_head_names_form_one_small_row_below_caption_without_changing_height(mod
         assert all(float(pos[2]) == expected_y for pos in positions)
         assert all(float(pos[3]) == pytest.approx(16 / face.units_per_em, abs=0.000005) for pos in positions)
         left = float(positions[0][1])
-        expected_x = 40.0 if idx in (0, 2) else 185.0
+        expected_x = 52.0 if idx in (0, 2) else 190.0
         assert left == pytest.approx(expected_x, abs=0.5)
         right = left + face.advance(name, 16)
         assert right < 350
@@ -81,6 +81,10 @@ def test_head_highlights_share_scene_timing_and_induction_static_state(mode):
         assert active.attrib["class"] == f"l s{s}"
         assert active.attrib["fill"] == INK[mode]
         assert active.attrib["style"] == f"animation-delay:{expected_delay:.3f}s"
-        assert [use.attrib for use in active] == [use.attrib for use in group.findall("svg:use", NS)]
+        assert [use.attrib for use in active.findall("svg:use", NS)] == [use.attrib for use in group.findall("svg:use", NS)]
+        diamond = active.find("svg:path", NS)
+        assert diamond is not None
+        assert diamond.attrib["fill"] == CATEGORICAL[("blue", "aqua", "magenta", "violet")[s]][mode]
+        assert len(active) == len(group.findall("svg:use", NS)) + 1
         scene = root.find(f".//svg:g[@class='l s{s}'][svg:g]", NS)
         assert scene.attrib["style"] == active.attrib["style"]
