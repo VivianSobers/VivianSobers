@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from figkit.cli import main
-from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
+from figkit.color import CATEGORICAL, FAINT, INK, MUTED
 from figkit.svg import delay, document
 from figkit.text import Face, Outliner, run_start
 
@@ -82,9 +82,11 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     model = data["config"]["model"].split("/")[-1]
     title = f"{len(rows)} attention heads, one score form at a time"
     subtitle = f"Relative error against {model}'s own attention scores, one prompt, every head"
-    labels = (("exact", "exact form", BLUE[mode], 108),
-              ("no_rope", "rotary left out", EMBER[mode], 108),
-              ("plain", "plain q·k", EMBER[mode], 138))
+    colors = {form: CATEGORICAL[hue][mode]
+              for form, hue in (("plain", "orange"), ("no_rope", "aqua"), ("exact", "blue"))}
+    labels = (("exact", "exact form", colors["exact"], 108),
+              ("no_rope", "rotary left out", colors["no_rope"], 108),
+              ("plain", "plain q·k", colors["plain"], 138))
     face, out = faces(), Outliner()
     ink = out.run(face["title"], title, 40, 44, 26)
     muted = out.run(face["body"], subtitle, 40, 74, 18)
@@ -118,8 +120,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         y = ys[row["layer"]]
         stagger = delay(row["layer"] * 0.02, freeze_at)
         for form in ("plain", "no_rope"):
-            paint = (f'fill="none" stroke="{EMBER[mode]}" stroke-width="2.5"' if form == "plain"
-                     else f'fill="{EMBER[mode]}"')
+            paint = (f'fill="none" stroke="{colors["plain"]}" stroke-width="2.5"' if form == "plain"
+                     else f'fill="{colors["no_rope"]}"')
             traces.append(
                 f'<circle class="trace {form}" cx="{log_x(row[form], geometry):.2f}" cy="{y:.2f}" '
                 f'r="5" opacity="0.3" {paint} style="{stagger}"/>'
@@ -128,15 +130,16 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         stops = f'--plain:{log_x(row["plain"], geometry) - x:.2f}px;--no_rope:{log_x(row["no_rope"], geometry) - x:.2f}px'
         dots.append(
             f'<circle class="head" cx="{x:.2f}" cy="{y:.2f}" r="5" opacity="0.85" '
-            f'fill="{BLUE[mode]}" style="{stops};{stagger}"/>'
+            f'fill="{colors["exact"]}" style="{stops};{stagger}"/>'
         )
     css = (
         "@keyframes travel{0%,12.5%{transform:translateX(var(--plain))}"
         "21.875%,34.375%{transform:translateX(var(--no_rope))}"
         "43.75%,93.75%{transform:translateX(0)}93.751%,100%{transform:translateX(var(--plain))}}"
-        f"@keyframes paint{{0%,34.375%{{fill:{EMBER[mode]};opacity:0.85}}"
-        f"43.75%,87.5%{{fill:{BLUE[mode]};opacity:0.85}}93.75%{{fill:{BLUE[mode]};opacity:0}}"
-        f"93.751%{{fill:{EMBER[mode]};opacity:0}}100%{{fill:{EMBER[mode]};opacity:0.85}}}}"
+        f"@keyframes paint{{0%,12.5%{{fill:{colors["plain"]};opacity:0.85}}"
+        f"21.875%,34.375%{{fill:{colors["no_rope"]};opacity:0.85}}"
+        f"43.75%,87.5%{{fill:{colors["exact"]};opacity:0.85}}93.75%{{fill:{colors["exact"]};opacity:0}}"
+        f"93.751%{{fill:{colors["plain"]};opacity:0}}100%{{fill:{colors["plain"]};opacity:0.85}}}}"
         ".head{animation:travel 16s ease-in-out infinite backwards,paint 16s ease-in-out infinite backwards}"
         "@keyframes trail_plain{0%,12.5%{opacity:0}21.875%,87.5%{opacity:0.3}93.75%,100%{opacity:0}}"
         "@keyframes trail_no_rope{0%,34.375%{opacity:0}43.75%,87.5%{opacity:0.3}93.75%,100%{opacity:0}}"
@@ -158,9 +161,9 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     return document(
         geometry.width, geometry.height, title,
         f"{subtitle}. Each blue dot is one head at its exact-form relative error; layer {layers[0]} is at the top. "
-        "Faint orange dots mark the earlier plain-product and rotary-left-out forms. "
+        "Faint orange rings mark the plain-product form; aqua dots mark the rotary-left-out form. "
         "Plain-product traces are open rings; rotary-left-out traces are filled. "
-        "Filled heads slide through the three forms, turning blue at the exact form. "
+        "Filled heads slide through the three forms, orange at the plain product, aqua with rotary left out, and blue at the exact form. "
         f"Vertical markers compare all three medians: {'; '.join(values)}.",
         css, out.defs(), body, freeze_at,
     )

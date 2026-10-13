@@ -23,10 +23,11 @@ def test_motion_uses_each_heads_recorded_stops_and_layer_delay(mode):
                      '21.875%,34.375%{transform:translateX(var(--no_rope))}',
                      '43.75%,93.75%{transform:translateX(0)}'):
         assert fragment in css
-    from figkit.color import BLUE, EMBER
-    assert f'0%,34.375%{{fill:{EMBER[mode]};opacity:0.85}}' in css
-    assert f'43.75%,87.5%{{fill:{BLUE[mode]};opacity:0.85}}' in css
-    assert f'93.75%{{fill:{BLUE[mode]};opacity:0}}' in css
+    from figkit.color import CATEGORICAL
+    assert f'0%,12.5%{{fill:{CATEGORICAL["orange"][mode]};opacity:0.85}}' in css
+    assert f'21.875%,34.375%{{fill:{CATEGORICAL["aqua"][mode]};opacity:0.85}}' in css
+    assert f'43.75%,87.5%{{fill:{CATEGORICAL["blue"][mode]};opacity:0.85}}' in css
+    assert f'93.75%{{fill:{CATEGORICAL["blue"][mode]};opacity:0}}' in css
     assert '*{animation-play-state:paused!important}' in css
     assert '@media (prefers-reduced-motion:reduce){*{animation:none!important}}' in css
 

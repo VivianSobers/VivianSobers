@@ -36,7 +36,7 @@ def test_log_x_spaces_decades_evenly():
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_static_state_places_every_head_at_its_exact_error(mode):
     build = builder()
-    from figkit.color import BLUE
+    from figkit.color import CATEGORICAL
     snapshot = data()
     svg = build.render(snapshot, mode)
     root = ET.fromstring(svg)
@@ -45,7 +45,7 @@ def test_static_state_places_every_head_at_its_exact_error(mode):
     assert len(dots) == len(snapshot["rows"])
     for dot, row in zip(dots, snapshot["rows"]):
         assert float(dot.attrib["cx"]) == pytest.approx(build.log_x(row["exact"]), abs=0.01)
-        assert dot.attrib["fill"] == BLUE[mode]
+        assert dot.attrib["fill"] == CATEGORICAL["blue"][mode]
     layers = {row["layer"]: float(dot.attrib["cy"]) for dot, row in zip(dots, snapshot["rows"])}
     assert list(layers.values()) == sorted(layers.values())
     assert len(set(layers.values())) == len(layers)
@@ -144,7 +144,7 @@ def test_plot_spacing_and_mark_visibility():
 @pytest.mark.parametrize("mode", ["light", "dark"])
 def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
     build = builder()
-    from figkit.color import EMBER
+    from figkit.color import CATEGORICAL
     snapshot = data()
     root = ET.fromstring(build.render(snapshot, mode))
     circles = root.findall('.//s:circle', NS)
@@ -157,10 +157,10 @@ def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
             assert trace.attrib["cy"] == head.attrib["cy"]
             if form == "plain":
                 assert trace.attrib["fill"] == "none"
-                assert trace.attrib["stroke"] == EMBER[mode]
+                assert trace.attrib["stroke"] == CATEGORICAL["orange" if form == "plain" else "aqua"][mode]
                 assert trace.attrib["stroke-width"] == "2.5"
             else:
-                assert trace.attrib["fill"] == EMBER[mode]
+                assert trace.attrib["fill"] == CATEGORICAL["orange" if form == "plain" else "aqua"][mode]
             assert trace.attrib["r"] == "5"
             assert trace.attrib["opacity"] == "0.3"
             assert circles.index(trace) < circles.index(heads[0])
@@ -169,7 +169,7 @@ def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
 def test_description_explains_earlier_form_traces():
     root = ET.fromstring(builder().render(data(), "light"))
     desc = root.find("s:desc", NS).text
-    assert "Faint orange dots mark the earlier plain-product and rotary-left-out forms." in desc
+    assert "Faint orange rings mark the plain-product form; aqua dots mark the rotary-left-out form." in desc
 
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
