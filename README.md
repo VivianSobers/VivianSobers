@@ -81,7 +81,9 @@ Can a CUDA job pause into host RAM and resume intact? 33 runs went through 388 p
 
 A Rust renderer whose output is differentiable, so it can optimize triangle positions, colours and opacity to reconstruct an image. The seeded run above cut the loss 503× in 797 steps on one core. It includes a PyTorch autograd layer and a WebAssembly viewer.
 
-- **[Stormbreaker](https://github.com/VivianSobers/Stormbreaker)** — Learning per-machine models of Linux power consumption to estimate which applications drain the battery. **4.2% final-energy error over a held-out 27.6-minute discharge**; the repository separately measures the weaker per-application attribution claim.
+### [Stormbreaker](https://github.com/VivianSobers/Stormbreaker): where the battery goes
+
+Per-machine models of Linux power consumption, used to estimate which applications drain the battery. 4.2% final-energy error over a held-out 27.6-minute discharge. The repository measures the weaker per-application attribution claim separately.
 
 ## Tools for real work
 
