@@ -21,12 +21,12 @@ HERE = Path(__file__).resolve().parent
 @dataclass(frozen=True)
 class Geometry:
     width: float = 1280
-    height: float = 420
-    left: float = 350
+    height: float = 560
+    left: float = 390
     right: float = 1240
-    top: float = 122
-    bottom: float = 354
-    axis: float = 392
+    top: float = 150
+    bottom: float = 470
+    axis: float = 512
     minutes: float = 36
 
 
@@ -57,8 +57,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     title = f"{count} drills, each checked against a control run"
     date = data["config"]["run_started"].split("T")[0]
     subtitle = f"One drillbook run on {date}. Minutes after the fault was injected."
-    heading = out.run(face["title"], title, 40, 44, 22)
-    subline = out.run(face["body"], subtitle, 40, 70, 15)
+    heading = out.run(face["title"], title, 40, 48, 26)
+    subline = out.run(face["body"], subtitle, 40, 78, 18)
     ticks, lanes, descriptions = [], [], []
     sweep, hold, fade = 12, 4, 1
     loop = sweep + hold + fade
@@ -86,8 +86,8 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         label = f"{minute} min" if minute == tick_minutes[-1] else str(minute)
         ticks.append(
             f'<line x1="{x:.2f}" x2="{x:.2f}" y1="{geometry.top - 20:g}" '
-            f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="1" opacity="0.6"/>'
-            f'<g fill="{MUTED[mode]}">{out.run(face["number"], label, x, geometry.axis + 18, 13, "middle")}</g>'
+            f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="2.5" opacity="0.6"/>'
+            f'<g fill="{MUTED[mode]}">{out.run(face["number"], label, x, geometry.axis + 22, 16, "end" if minute == tick_minutes[-1] else "middle")}</g>'
         )
     for index, row in enumerate(rows):
         y = geometry.top + index * (geometry.bottom - geometry.top) / max(1, len(rows) - 1)
@@ -102,40 +102,41 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
             styles[kind] = f"animation:{name} {loop:g}s steps(1,end) infinite;{frozen}"
         fired_label = f"fired {duration(row['fired_after_s'])}"
         cleared_label = f"cleared +{duration(row['resolved_after_s'])}"
-        labels = out.run(face["number"], row["drill"], 40, y - 4, 13)
-        labels += out.run(face["number"], row["alert"], 40, y + 16, 13)
-        anchor = "end" if cleared + face["number"].advance(cleared_label, 13) > geometry.right else "start"
+        labels = out.run(face["number"], row["drill"], 40, y - 6, 16)
+        labels += out.run(face["number"], row["alert"], 40, y + 18, 16)
+        fired_anchor = "end" if fired + face["number"].advance(fired_label, 16) > geometry.right else "start"
+        cleared_anchor = "end" if cleared + face["number"].advance(cleared_label, 16) > geometry.right else "start"
         control = (
             f'<line class="control" clip-path="url(#clock-window)" x1="{fired:.2f}" x2="{geometry.right:g}" '
-            f'y1="{y + 10:g}" y2="{y + 10:g}" stroke="{EMBER[mode]}" '
-            'stroke-width="1" stroke-dasharray="5 5"/>'
+            f'y1="{y + 12:g}" y2="{y + 12:g}" stroke="{EMBER[mode]}" '
+            'stroke-width="2.5" stroke-dasharray="5 5"/>'
         ) if row["control_ran"] and not row["control_cleared"] else ""
         if index == 0 and control:
             control += (
                 f'<g class="control-label" fill="{EMBER[mode]}" style="animation:control-label {loop:g}s steps(1,end) infinite;{frozen}">'
-                f'{out.run(face["body"], "control: still firing", geometry.right, y - 14, 13, "end")}</g>'
+                f'{out.run(face["body"], "control: still firing", geometry.right, y - 18, 16, "end")}</g>'
             )
             css += f"@keyframes control-label{{0%{{opacity:0}}{stop:.6f}%{{opacity:1}}100%{{opacity:1}}}}"
         fault_label = (
             f'<g class="fault-label" fill="{EMBER[mode]}">'
-            f'{out.run(face["body"], "fault", geometry.left, y - 14, 13)}</g>'
+            f'{out.run(face["body"], "fault", geometry.left, y - 44, 16)}</g>'
         ) if index == 0 else ""
         lanes.append(
             f'<g class="lane" data-drill={quoteattr(row["drill"])}>'
             f'<g fill="{MUTED[mode]}">{labels}</g>'
             f'<line class="baseline" x1="{geometry.left:g}" x2="{geometry.right:g}" '
-            f'y1="{y:g}" y2="{y:g}" stroke="{FAINT[mode]}" stroke-width="1"/>'
+            f'y1="{y:g}" y2="{y:g}" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
             f'<line class="wait" clip-path="url(#clock-window)" x1="{geometry.left:g}" x2="{fired:.2f}" '
-            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2" opacity="0.35"/>'
+            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2.5" opacity="0.35"/>'
             f'<line class="fault" x1="{geometry.left:g}" x2="{geometry.left:g}" '
-            f'y1="{y - 6:g}" y2="{y + 6:g}" stroke="{EMBER[mode]}" stroke-width="2"/>'
+            f'y1="{y - 6:g}" y2="{y + 6:g}" stroke="{EMBER[mode]}" stroke-width="2.5"/>'
             f'{fault_label}'
             f'{control}<line class="firing" clip-path="url(#clock-window)" x1="{fired:.2f}" x2="{cleared:.2f}" '
-            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2"/>'
-            f'<circle class="fired" style="{styles["fired"]}" cx="{fired:.2f}" cy="{y:g}" r="4" fill="{EMBER[mode]}"/>'
-            f'<circle class="cleared" style="{styles["cleared"]}" cx="{cleared:.2f}" cy="{y:g}" r="4" fill="{BLUE[mode]}"/>'
-            f'<g class="fired-label" style="{styles["fired"]}" fill="{EMBER[mode]}">{out.run(face["number"], fired_label, fired, y - 14, 13)}</g>'
-            f'<g class="cleared-label" style="{styles["cleared"]}" fill="{BLUE[mode]}">{out.run(face["number"], cleared_label, cleared, y + 23, 13, anchor)}</g></g>'
+            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2.5"/>'
+            f'<circle class="fired" style="{styles["fired"]}" cx="{fired:.2f}" cy="{y:g}" r="5" fill="{EMBER[mode]}"/>'
+            f'<circle class="cleared" style="{styles["cleared"]}" cx="{cleared:.2f}" cy="{y:g}" r="5" fill="{BLUE[mode]}"/>'
+            f'<g class="fired-label" style="{styles["fired"]}" fill="{EMBER[mode]}">{out.run(face["number"], fired_label, fired, y - 18, 16, fired_anchor)}</g>'
+            f'<g class="cleared-label" style="{styles["cleared"]}" fill="{BLUE[mode]}">{out.run(face["number"], cleared_label, cleared, y + 36, 16, cleared_anchor)}</g></g>'
         )
         descriptions.append(f"{row['drill']} ({row['alert']}): {fired_label}, {cleared_label}")
     body = (
@@ -144,9 +145,9 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f'<g class="clock-marks" style="{frozen}">{"".join(lanes)}'
         f'<line class="playhead" x1="{geometry.left:g}" x2="{geometry.left:g}" '
         f'y1="{geometry.top - 20:g}" y2="{geometry.axis:g}" stroke="{MUTED[mode]}" '
-        f'stroke-width="1" style="{frozen}"/></g>'
+        f'stroke-width="2.5" style="{frozen}"/></g>'
         f'<line x1="{geometry.left:g}" x2="{geometry.right:g}" y1="{geometry.axis:g}" '
-        f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="1"/></g>'
+        f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="2.5"/></g>'
     )
     return document(
         geometry.width, geometry.height, title,

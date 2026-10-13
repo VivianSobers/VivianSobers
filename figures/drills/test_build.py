@@ -32,7 +32,7 @@ def test_duration_rounds_to_the_second(seconds, expected):
 def test_final_lanes_follow_recorded_times(mode):
     svg = build.render(DATA, mode)
     root = ET.fromstring(svg)
-    assert root.attrib["viewBox"] == "0 0 1280 420"
+    assert root.attrib["viewBox"] == "0 0 1280 560"
     lanes = root.findall(".//s:g[@class='lane']", NS)
     assert len(lanes) == len(DATA["rows"])
     for lane, row in zip(lanes, DATA["rows"]):
@@ -53,7 +53,7 @@ def test_final_lanes_follow_recorded_times(mode):
         for kind, x, color in (("fired", start, EMBER[mode]), ("cleared", end, BLUE[mode])):
             dot = lane.find(f"s:circle[@class='{kind}']", NS)
             assert float(dot.attrib["cx"]) == pytest.approx(x, abs=0.01)
-            assert float(dot.attrib["r"]) >= 4
+            assert float(dot.attrib["r"]) >= 5
             assert dot.attrib["fill"] == color
         desc = root.find("s:desc", NS).text
         assert row["alert"] in desc
@@ -109,7 +109,7 @@ def test_each_lane_shows_the_fault_and_wait_until_firing(mode):
         assert float(fault.attrib["y1"]) == y - 6
         assert float(fault.attrib["y2"]) == y + 6
         assert fault.attrib["stroke"] == wait.attrib["stroke"] == EMBER[mode]
-        assert float(fault.attrib["stroke-width"]) == float(wait.attrib["stroke-width"]) == 2
+        assert float(fault.attrib["stroke-width"]) == float(wait.attrib["stroke-width"]) == 2.5
         assert float(wait.attrib["x1"]) == build.time_x(0)
         assert float(wait.attrib["x2"]) == pytest.approx(build.time_x(row["fired_after_s"] / 60), abs=0.01)
         assert float(wait.attrib["y1"]) == float(wait.attrib["y2"]) == y
@@ -124,17 +124,17 @@ def test_clock_sweeps_then_holds_and_fades_with_a_final_base_state():
     css = root.find("s:style", NS).text
     playhead = root.find(".//s:line[@class='playhead']", NS)
     assert playhead is not None
-    assert float(playhead.attrib["x1"]) == float(playhead.attrib["x2"]) == 350
-    assert "transform:translateX(890px)" in css
+    assert float(playhead.attrib["x1"]) == float(playhead.attrib["x2"]) == 390
+    assert "transform:translateX(850px)" in css
     assert "70.588235%" in css
     assert "94.117647%" in css
     assert "17s linear infinite" in css
     assert "17s ease-in-out infinite" in css
     clip = root.find(".//s:clipPath[@id='clock-window']/s:rect", NS)
     assert clip is not None
-    assert float(clip.attrib["width"]) == 890
+    assert float(clip.attrib["width"]) == 850
     assert ".fired,.cleared,.fired-label,.cleared-label,.control-label{opacity:1}" in css
-    assert ".playhead{transform:translateX(890px)}" in css
+    assert ".playhead{transform:translateX(850px)}" in css
     for lane in root.findall(".//s:g[@class='lane']", NS):
         for kind in ("wait", "firing", "control"):
             assert lane.find(f"s:line[@class='{kind}']", NS).attrib["clip-path"] == "url(#clock-window)"
@@ -165,3 +165,43 @@ def test_event_reveals_follow_the_supplied_times_and_freeze_together():
     assert "animation-delay:-6.000s" in root.find(".//s:line[@class='playhead']", NS).attrib["style"]
     assert "animation-play-state:paused!important" in css
     assert "@media (prefers-reduced-motion:reduce){*{animation:none!important}}" in css
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_text_is_readable_and_has_room_at_readme_width(monkeypatch, mode):
+    runs = []
+    original = build.Outliner.run
+
+    def capture(self, face, text, x, y, size, anchor="start"):
+        width = face.advance(text, size)
+        left = x - {"start": 0, "middle": width / 2, "end": width}[anchor]
+        runs.append((text, size, (left, y - size, left + width, y + size / 4)))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(build.Outliner, "run", capture)
+    build.render(DATA, mode, freeze_at=13)
+    assert runs[0][1] == 26
+    assert runs[1][1] == 18
+    assert all(size >= 16 for _, size, _ in runs)
+    for text, _, (left, top, right, bottom) in runs:
+        assert 40 <= left < right <= 1240, text
+        assert 0 <= top < bottom <= build.Geometry().height - 14, text
+    for index, (text, _, box) in enumerate(runs):
+        for other, _, next_box in runs[index + 1:]:
+            assert (box[2] + 4 <= next_box[0] or next_box[2] + 4 <= box[0]
+                    or box[3] + 4 <= next_box[1] or next_box[3] + 4 <= box[1]), (text, other)
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_marks_scale_with_the_larger_labels(mode):
+    root = ET.fromstring(build.render(DATA, mode))
+    for line in root.findall(".//s:line", NS):
+        assert float(line.attrib["stroke-width"]) == 2.5
+    for dot in root.findall(".//s:circle", NS):
+        assert float(dot.attrib["r"]) >= 5
+    lanes = root.findall(".//s:g[@class='lane']", NS)
+    for lane in lanes:
+        labels = lane.find("s:g", NS)
+        xs = [float(use.attrib["transform"].split("(")[1].split()[0])
+              for use in labels.findall("s:use", NS)]
+        assert max(xs) + 16 < build.Geometry().left - 20
