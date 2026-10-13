@@ -61,7 +61,15 @@ A clustered auction service with Gleam bidding rules and Elixir/OTP processes. E
 
 Decomposing attention scores into query and key feature interactions. The corrected score form reproduces Qwen3-0.6B's attention scores to a median relative error of 2.5 × 10⁻⁷ across all 448 heads. My [open circuit-tracer contribution](https://github.com/decoderesearch/circuit-tracer/pull/114) splits attribution edges across the heads that carried them.
 
-- **[gpunap](https://github.com/VivianSobers/gpunap)** — Testing whether CUDA jobs can pause into host RAM and resume intact. **388 completed pause/resume cycles across nine workload types**, with bit-for-bit agreement against uninterrupted runs. The repository includes an installable validation CLI and documents the driver hazards; the scheduler remains future work.
+### [gpunap](https://github.com/VivianSobers/gpunap): pausing CUDA jobs into host RAM
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/gpunap/gpunap-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="figures/gpunap/gpunap-light.svg">
+  <img alt="A grid of 388 cells, one per completed pause and resume, grouped by run in nine workload rows from MLP (106 cycles in 8 runs) to single-GPU NCCL (10 cycles in 2 runs). Every cell ends blue: each run's output matched an uninterrupted run bit for bit. Five runs on one machine that never paused are not counted." src="figures/gpunap/gpunap-light.svg" width="100%">
+</picture>
+
+Can a CUDA job pause into host RAM and resume intact? 33 runs went through 388 pause and resume cycles across nine workload types, each matching an uninterrupted run bit for bit. The repository has an installable validation CLI and documents the seven driver hazards that make pausing an arbitrary job unsafe. The scheduler is future work.
 
 - **[Differentiable Rasterizer](https://github.com/VivianSobers/Differentiable-Rasterizer)** — A Rust renderer that runs backwards: optimize triangle positions, colors, and opacity to reconstruct an image. The recorded 150-triangle fit reduces loss **606×**. Includes a PyTorch autograd layer and a WebAssembly viewer.
 
