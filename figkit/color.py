@@ -7,6 +7,20 @@ MUTED = {"light": "#59636e", "dark": "#9198a1"}
 FAINT = {"light": "#d1d9e0", "dark": "#3d444d"}
 BLUE = {"light": "#256abf", "dark": "#3987e5"}
 EMBER = {"light": "#d9622b", "dark": "#e0702f"}
+CATEGORICAL = {
+    "blue": {"light": "#2a78d6", "dark": "#3987e5"},
+    "orange": {"light": "#eb6834", "dark": "#d95926"},
+    "aqua": {"light": "#1baf7a", "dark": "#199e70"},
+    "yellow": {"light": "#eda100", "dark": "#c98500"},
+    "magenta": {"light": "#e87ba4", "dark": "#d55181"},
+    "green": {"light": "#008300", "dark": "#008300"},
+    "violet": {"light": "#6250d6", "dark": "#9085e9"},
+    "red": {"light": "#e34948", "dark": "#e66767"},
+}
+STATUS = {
+    "good": "#0ca30c", "warning": "#fab219",
+    "serious": "#ec835a", "critical": "#d03b3b",
+}
 
 
 def _to_linear(channel: float) -> float:
@@ -35,16 +49,40 @@ def to_oklab(hex_color: str) -> tuple[float, float, float]:
     )
 
 
-def from_oklab(lightness: float, a: float, b: float) -> str:
+def _oklab_to_linear(lightness: float, a: float, b: float) -> tuple[float, float, float]:
     l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
     m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
     s = (lightness - 0.0894841775 * a - 1.2914855480 * b) ** 3
-    rgb = (
+    return (
         4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
         -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
         -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
     )
-    return "#" + "".join(f"{round(_from_linear(c) * 255):02x}" for c in rgb)
+
+
+def from_oklab(lightness: float, a: float, b: float) -> str:
+    return linear_to_srgb_hex(_oklab_to_linear(lightness, a, b))
+
+
+def hue_ramp(hex_color: str, steps: int = 7) -> tuple[str, ...]:
+    if steps < 2:
+        raise ValueError("a ramp needs at least two stops")
+    _, a, b = to_oklab(hex_color)
+    stops = []
+    for k in range(steps):
+        lightness = 0.95 - 0.65 * k / (steps - 1)
+        scale = 1.0
+        if not all(0 <= c <= 1 for c in _oklab_to_linear(lightness, a, b)):
+            lo, hi = 0.0, 1.0
+            for _ in range(24):
+                scale = (lo + hi) / 2
+                if all(0 <= c <= 1 for c in _oklab_to_linear(lightness, a * scale, b * scale)):
+                    lo = scale
+                else:
+                    hi = scale
+            scale = lo
+        stops.append(from_oklab(lightness, a * scale, b * scale))
+    return tuple(stops)
 
 
 def oklab_lightness(hex_color: str) -> float:
