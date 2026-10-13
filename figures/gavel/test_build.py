@@ -52,7 +52,9 @@ def test_static_svg_has_complete_log_and_outcomes(mode):
     assert len(requests) == len(snapshot['requests'])
     assert len(root.findall('.//s:g[@class="rejection"]', NS)) == 1
     assert len(root.findall('.//s:g[@class="duplicate"]', NS)) == 1
-    assert '@keyframes' not in svg
+    assert '@keyframes' in svg
+    assert '.log-cell,.rejection,.duplicate{opacity:1}' in svg
+    assert '.traveler{opacity:0}' in svg
     assert 'prefers-reduced-motion:reduce' in svg
     assert len(svg.encode()) < 400_000
     assert '<text' not in svg
