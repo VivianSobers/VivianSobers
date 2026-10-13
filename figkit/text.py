@@ -88,3 +88,14 @@ class Outliner:
 
     def defs(self) -> str:
         return "".join(self._paths)
+
+
+def power_run(out: Outliner, face: Face, parts: tuple[str, str], x: float, y: float,
+              size: float, anchor: str = "start") -> str:
+    base, exponent = parts
+    if not exponent:
+        return out.run(face, base, x, y, size, anchor)
+    width = face.advance(base, size)
+    start = run_start(x, width + face.advance(exponent, size * 0.7), anchor)
+    return (out.run(face, base, start, y, size)
+            + out.run(face, exponent, start + width, y - size * 0.4, size * 0.7))

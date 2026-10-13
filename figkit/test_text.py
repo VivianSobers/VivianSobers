@@ -45,3 +45,14 @@ def test_same_glyph_from_two_instances_gets_two_definitions(mona):
     outliner.run(Face(MONA, {"wdth": 100, "wght": 400}), "V", x=0, y=0, size=20)
     assert outliner.defs().count("<path ") == 2
 
+
+
+def test_shared_power_run_keeps_the_existing_raised_digit_output(mona):
+    from figkit.text import power_run
+    out = Outliner()
+    width = mona.advance("10", 13) + mona.advance("−5", 9.1)
+    start = 200 - width
+    expected = out.run(mona, "10", start, 100, 13)
+    expected += out.run(mona, "−5", start + mona.advance("10", 13), 94.8, 9.1)
+    assert power_run(out, mona, ("10", "−5"), 200, 100, 13, "end") == expected
+    assert power_run(out, mona, ("12", ""), 200, 100, 13) == out.run(mona, "12", 200, 100, 13)

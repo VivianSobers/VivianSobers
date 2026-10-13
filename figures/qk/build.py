@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from figkit.cli import main
 from figkit.color import BLUE, EMBER, FAINT, INK, MUTED
 from figkit.svg import delay, document
-from figkit.text import Face, Outliner, run_start
+from figkit.text import Face, Outliner, power_run
 
 HERE = Path(__file__).resolve().parent
 SUPERSCRIPT = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
@@ -49,17 +49,6 @@ def power_parts(value: float) -> tuple[str, str]:
     mantissa, exponent = text.split("e")
     base = "10" if mantissa == "1" else f"{mantissa} × 10"
     return base, str(int(exponent)).replace("-", "−")
-
-
-def power_run(out: Outliner, face: Face, parts: tuple[str, str], x: float, y: float,
-              size: float, anchor: str = "start") -> str:
-    base, exponent = parts
-    if not exponent:
-        return out.run(face, base, x, y, size, anchor)
-    width = face.advance(base, size)
-    start = run_start(x, width + face.advance(exponent, size * 0.7), anchor)
-    return (out.run(face, base, start, y, size)
-            + out.run(face, exponent, start + width, y - size * 0.4, size * 0.7))
 
 
 @cache

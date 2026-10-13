@@ -18,6 +18,10 @@ def _from_linear(channel: float) -> float:
     return 12.92 * channel if channel <= 0.0031308 else 1.055 * channel ** (1 / 2.4) - 0.055
 
 
+def linear_to_srgb_hex(channels) -> str:
+    return "#" + "".join(f"{round(_from_linear(channel) * 255):02x}" for channel in channels)
+
+
 def to_oklab(hex_color: str) -> tuple[float, float, float]:
     r, g, b = (_to_linear(int(hex_color[k : k + 2], 16) / 255) for k in (1, 3, 5))
     l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
