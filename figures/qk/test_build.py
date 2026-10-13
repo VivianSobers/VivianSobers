@@ -40,7 +40,7 @@ def test_static_state_places_every_head_at_its_exact_error(mode):
     snapshot = data()
     svg = build.render(snapshot, mode)
     root = ET.fromstring(svg)
-    assert root.attrib["viewBox"] == "0 0 1280 380"
+    assert root.attrib["viewBox"] == "0 0 1280 430"
     dots = root.findall('.//s:circle[@class="head"]', NS)
     assert len(dots) == len(snapshot["rows"])
     for dot, row in zip(dots, snapshot["rows"]):
@@ -95,3 +95,46 @@ def test_qk_script_supports_preview():
     for mode in ("light", "dark"):
         svg = (ROOT / f".preview/qk-{mode}-0.svg").read_text()
         assert "animation-play-state:paused!important" in svg
+
+
+@pytest.mark.parametrize("value, expected", [(2.5e-7, ("2.5 × 10", "−7")), (1e-8, ("10", "−8"))])
+def test_power_parts_use_regular_digits_and_real_minus(value, expected):
+    assert builder().power_parts(value) == expected
+
+
+def test_power_run_centers_base_and_raised_exponent():
+    build = builder()
+    from figkit.text import Outliner
+    face = build.faces()["number"]
+    base, exponent = build.power_parts(2.5e-7)
+    size, x, y = 15, 300, 200
+    out = Outliner()
+    run = build.power_run(out, face, (base, exponent), x, y, size, "middle")
+    width = face.advance(base, size) + face.advance(exponent, size * 0.7)
+    start = x - width / 2
+    expected = out.run(face, base, start, y, size)
+    expected += out.run(face, exponent, start + face.advance(base, size), y - size * 0.4, size * 0.7)
+    assert run == expected
+
+
+def test_plot_spacing_and_mark_visibility():
+    build = builder()
+    root = ET.fromstring(build.render(data(), "light"))
+    geometry = build.Geometry()
+    dots = root.findall('.//s:circle[@class="head"]', NS)
+    ys = sorted({float(dot.attrib["cy"]) for dot in dots})
+    gaps = [b - a for a, b in zip(ys, ys[1:])]
+    assert min(gaps) >= 10
+    assert all(gap == pytest.approx(gaps[0]) for gap in gaps)
+    assert all(dot.attrib["r"] == "3.5" and dot.attrib["opacity"] == "0.85" for dot in dots)
+    from figkit.color import FAINT
+    grid = root.find(f'.//s:g[@stroke="{FAINT["light"]}"]', NS)
+    assert grid.attrib["opacity"] == "0.6"
+    assert len(grid.findall("s:line", NS)) == 12
+    ticks = root.findall('.//s:g[@class="power-tick"]', NS)
+    assert len(ticks) == 12
+    for tick in ticks:
+        uses = tick.findall("s:use", NS)
+        baseline = float(uses[0].attrib["transform"].split(")")[0].split()[-1])
+        assert baseline == geometry.bottom + 18
+        assert geometry.height - baseline >= 14
