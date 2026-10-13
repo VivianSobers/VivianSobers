@@ -51,7 +51,8 @@ def test_static_state_places_every_head_at_its_exact_error(mode):
     assert len(set(layers.values())) == len(layers)
     assert len(root.findall('.//s:line[@class="tick"]', NS)) == 12
     assert not root.findall('.//s:text', NS)
-    assert "@keyframes" not in svg
+    assert "@keyframes" in svg
+    assert "@media (prefers-reduced-motion:reduce){*{animation:none!important}}" in svg
     assert len(svg.encode()) < 400_000
     desc = root.find("s:desc", NS).text
     for value in ("1.2", "0.099", "2.5 × 10⁻⁷"):
@@ -154,7 +155,12 @@ def test_earlier_forms_are_faint_traces_beneath_exact_heads(mode):
         for trace, head, row in zip(traces, heads, snapshot["rows"]):
             assert float(trace.attrib["cx"]) == pytest.approx(build.log_x(row[form]), abs=0.01)
             assert trace.attrib["cy"] == head.attrib["cy"]
-            assert trace.attrib["fill"] == EMBER[mode]
+            if form == "plain":
+                assert trace.attrib["fill"] == "none"
+                assert trace.attrib["stroke"] == EMBER[mode]
+                assert trace.attrib["stroke-width"] == "1"
+            else:
+                assert trace.attrib["fill"] == EMBER[mode]
             assert trace.attrib["r"] == "2.5"
             assert trace.attrib["opacity"] == "0.3"
             assert circles.index(trace) < circles.index(heads[0])
