@@ -36,7 +36,7 @@ def time_x(minutes: float, geometry: Geometry = Geometry()) -> float:
 
 def duration(seconds: float) -> str:
     minutes, seconds = divmod(round(seconds), 60)
-    return f"{minutes}m{seconds:02d}s"
+    return f"{minutes}m{seconds:02d}s" if minutes else f"{seconds}s"
 
 
 @cache
@@ -60,12 +60,14 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     heading = out.run(face["title"], title, 40, 44, 22)
     subline = out.run(face["body"], subtitle, 40, 70, 15)
     ticks, lanes, descriptions = [], [], []
-    for minute in range(0, int(geometry.minutes) + 1, 5):
+    tick_minutes = range(0, int(geometry.minutes) + 1, 5)
+    for minute in tick_minutes:
         x = time_x(minute, geometry)
+        label = f"{minute} min" if minute == tick_minutes[-1] else str(minute)
         ticks.append(
             f'<line x1="{x:.2f}" x2="{x:.2f}" y1="{geometry.top - 20:g}" '
             f'y2="{geometry.axis:g}" stroke="{FAINT[mode]}" stroke-width="1" opacity="0.6"/>'
-            f'<g fill="{MUTED[mode]}">{out.run(face["number"], str(minute), x, geometry.axis + 18, 13, "middle")}</g>'
+            f'<g fill="{MUTED[mode]}">{out.run(face["number"], label, x, geometry.axis + 18, 13, "middle")}</g>'
         )
     for index, row in enumerate(rows):
         y = geometry.top + index * (geometry.bottom - geometry.top) / max(1, len(rows) - 1)
@@ -86,11 +88,20 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
                 f'<g class="control-label" fill="{EMBER[mode]}">'
                 f'{out.run(face["body"], "control: still firing", geometry.right, y - 14, 13, "end")}</g>'
             )
+        fault_label = (
+            f'<g class="fault-label" fill="{EMBER[mode]}">'
+            f'{out.run(face["body"], "fault", geometry.left, y - 14, 13)}</g>'
+        ) if index == 0 else ""
         lanes.append(
             f'<g class="lane" data-drill={quoteattr(row["drill"])}>'
             f'<g fill="{MUTED[mode]}">{labels}</g>'
             f'<line class="baseline" x1="{geometry.left:g}" x2="{geometry.right:g}" '
             f'y1="{y:g}" y2="{y:g}" stroke="{FAINT[mode]}" stroke-width="1"/>'
+            f'<line class="wait" x1="{geometry.left:g}" x2="{fired:.2f}" '
+            f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2" opacity="0.35"/>'
+            f'<line class="fault" x1="{geometry.left:g}" x2="{geometry.left:g}" '
+            f'y1="{y - 6:g}" y2="{y + 6:g}" stroke="{EMBER[mode]}" stroke-width="2"/>'
+            f'{fault_label}'
             f'{control}<line class="firing" x1="{fired:.2f}" x2="{cleared:.2f}" '
             f'y1="{y:g}" y2="{y:g}" stroke="{EMBER[mode]}" stroke-width="2"/>'
             f'<circle class="fired" cx="{fired:.2f}" cy="{y:g}" r="4" fill="{EMBER[mode]}"/>'
@@ -108,6 +119,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
     return document(
         geometry.width, geometry.height, title,
         f"{subtitle} {'; '.join(descriptions)}. "
+        "Orange ticks mark fault injection; faint orange lines show the wait before firing. "
         "Orange segments span firing to clearing; blue dots mark clearing. "
         "Dashed orange lines show the control runs still firing.",
         "", out.defs(), body, freeze_at,

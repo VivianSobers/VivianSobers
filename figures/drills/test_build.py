@@ -22,7 +22,8 @@ def test_time_axis_endpoints_and_spacing():
 
 
 @pytest.mark.parametrize("seconds, expected", [(105.081, "1m45s"), (960.568, "16m01s"),
-                                               (330.799, "5m31s"), (30.347, "0m30s")])
+                                               (330.799, "5m31s"), (30.347, "30s"), (30.987, "31s"),
+                                               (0, "0s"), (59.6, "1m00s"), (60, "1m00s")])
 def test_duration_rounds_to_the_second(seconds, expected):
     assert build.duration(seconds) == expected
 
@@ -80,9 +81,38 @@ def test_labels_use_supplied_data(monkeypatch):
     monkeypatch.setattr(build.Outliner, "run", capture)
     build.render(data, "light", freeze_at=7.5)
     assert "fired 2m03s" in labels
-    assert "cleared +0m47s" in labels
+    assert "cleared +47s" in labels
     assert any("2027-02-03" in label for label in labels)
     for row in data["rows"]:
         assert row["drill"] in labels
         assert row["alert"] in labels
-    assert [str(tick) for tick in range(0, 36, 5)] == [label for label in labels if label.isdigit()]
+    assert [str(tick) for tick in range(0, 35, 5)] == [label for label in labels if label.isdigit()]
+    assert labels.count("35 min") == 1
+    assert labels.count("fault") == 1
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_each_lane_shows_the_fault_and_wait_until_firing(mode):
+    data = copy.deepcopy(DATA)
+    data["rows"][0]["fired_after_s"] = 240
+    root = ET.fromstring(build.render(data, mode))
+    lanes = root.findall(".//s:g[@class='lane']", NS)
+    for lane, row in zip(lanes, data["rows"]):
+        baseline = lane.find("s:line[@class='baseline']", NS)
+        y = float(baseline.attrib["y1"])
+        fault = lane.find("s:line[@class='fault']", NS)
+        wait = lane.find("s:line[@class='wait']", NS)
+        assert fault is not None
+        assert wait is not None
+        assert float(fault.attrib["x1"]) == float(fault.attrib["x2"]) == build.time_x(0)
+        assert float(fault.attrib["y1"]) == y - 6
+        assert float(fault.attrib["y2"]) == y + 6
+        assert fault.attrib["stroke"] == wait.attrib["stroke"] == EMBER[mode]
+        assert float(fault.attrib["stroke-width"]) == float(wait.attrib["stroke-width"]) == 2
+        assert float(wait.attrib["x1"]) == build.time_x(0)
+        assert float(wait.attrib["x2"]) == pytest.approx(build.time_x(row["fired_after_s"] / 60), abs=0.01)
+        assert float(wait.attrib["y1"]) == float(wait.attrib["y2"]) == y
+        assert float(wait.attrib["opacity"]) == 0.35
+    assert len(root.findall(".//s:g[@class='fault-label']", NS)) == 1
+    assert lanes[0].find("s:g[@class='fault-label']", NS) is not None
+    assert "wait" in root.find("s:desc", NS).text
