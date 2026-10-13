@@ -39,7 +39,7 @@ def point_on_rect_border(px: float, py: float, rx: float, ry: float, rw: float, 
 def test_canvas_geometry_and_margins():
     geom = build.Geometry()
     assert geom.width == 1280
-    assert geom.height == 440
+    assert geom.height == 520
     assert geom.margin == 30
 
 
@@ -133,9 +133,9 @@ def test_render_svg_document_structure(mode):
     svg = build.render({}, mode)
     root = ET.fromstring(svg)
 
-    assert root.attrib["viewBox"] == "0 0 1280 440"
+    assert root.attrib["viewBox"] == "0 0 1280 520"
     assert root.attrib["width"] == "1280"
-    assert root.attrib["height"] == "440"
+    assert root.attrib["height"] == "520"
 
     title_elem = root.find("s:title", NS)
     assert title_elem is not None
@@ -168,7 +168,7 @@ def test_render_nodes_and_styling(mode):
 
     for rect in node_rects:
         assert rect.attrib["stroke"] == FAINT[mode]
-        assert float(rect.attrib["stroke-width"]) == 1.5
+        assert float(rect.attrib["stroke-width"]) == 2.5
         assert float(rect.attrib["rx"]) >= 6
         assert float(rect.attrib["ry"]) >= 6
         assert rect.attrib["fill"] in ("none", "transparent")
@@ -191,7 +191,7 @@ def test_render_edges_and_arrows(mode):
 
     for elem in edge_elements:
         assert elem.attrib["stroke"] == MUTED[mode]
-        assert float(elem.attrib["stroke-width"]) == 1.5
+        assert float(elem.attrib["stroke-width"]) == 2.5
         assert "marker-end" in elem.attrib
 
 
@@ -217,22 +217,23 @@ def test_animated_dots_specification(mode):
     svg = build.render({}, mode)
     root = ET.fromstring(svg)
 
-    # BLUE dots (r 4)
+    # BLUE moving dots (r 6)
     blue_dots = root.findall(f".//s:circle[@fill='{BLUE[mode]}']", NS)
     assert len(blue_dots) >= 1
     for d in blue_dots:
         if d.attrib.get("class") == "faint-dot":
             continue
-        assert float(d.attrib["r"]) == 4.0
+        assert float(d.attrib["r"]) == 6.0
 
-    # EMBER proposal dot (r 4)
+    # EMBER proposal dot (r 6)
     ember_dots = root.findall(f".//s:circle[@fill='{EMBER[mode]}']", NS)
     assert len(ember_dots) >= 1
-    assert any(float(d.attrib["r"]) == 4.0 for d in ember_dots)
+    assert any(float(d.attrib["r"]) == 6.0 for d in ember_dots)
 
     # Continuous fainter dots
     faint_dots = root.findall(".//s:circle[@class='faint-dot']", NS)
     assert len(faint_dots) >= 2
+    assert all(float(d.attrib["r"]) >= 5.0 for d in faint_dots)
 
 
 @pytest.mark.parametrize("mode", ["light", "dark"])
@@ -257,6 +258,15 @@ def test_settled_dots_at_postgresql():
         cy = float(dot.attrib["cy"])
         assert pg.x <= cx <= pg.x + pg.width
         assert pg.y <= cy <= pg.y + pg.height
+    # Dots settling in PostgreSQL must stop inside the box away from its text
+    assert len(settled) == 2
+    # Arranged at left edge away from text
+    assert all(float(d.attrib["cx"]) < pg.x + 40 for d in settled)
+    # Short stack: same cx, different cy
+    cxs = [float(d.attrib["cx"]) for d in settled]
+    cys = [float(d.attrib["cy"]) for d in settled]
+    assert cxs[0] == pytest.approx(cxs[1], abs=1.0)
+    assert abs(cys[0] - cys[1]) >= 12
 
 
 def test_desc_includes_animation_details():
@@ -266,3 +276,48 @@ def test_desc_includes_animation_details():
     assert "14 s" in desc or "14s" in desc or "14-second" in desc
     assert "late proposal" in desc
 
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_text_is_readable_and_has_room_at_readme_width(monkeypatch, mode):
+    runs = []
+    original = build.Outliner.run
+
+    def capture(self, face, text, x, y, size, anchor="start"):
+        width = face.advance(text, size)
+        left = x - {"start": 0, "middle": width / 2, "end": width}[anchor]
+        runs.append((text, size, (left, y - size, left + width, y + size / 4)))
+        return original(self, face, text, x, y, size, anchor)
+
+    monkeypatch.setattr(build.Outliner, "run", capture)
+    build.render({}, mode, freeze_at=13)
+    assert runs[0][1] == 26
+    assert runs[1][1] == 18
+    assert all(size >= 16 for _, size, _ in runs)
+    geom = build.Geometry()
+    for text, _, (left, top, right, bottom) in runs:
+        assert 30 <= left < right <= 1250, text
+        assert 0 <= top < bottom <= geom.height - 10, text
+    for index, (text, _, box) in enumerate(runs):
+        for other, _, next_box in runs[index + 1:]:
+            assert (box[2] + 2 <= next_box[0] or next_box[2] + 2 <= box[0]
+                    or box[3] + 2 <= next_box[1] or next_box[3] + 2 <= box[1]), (text, other)
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_marks_scale_with_the_larger_labels(mode):
+    root = ET.fromstring(build.render({}, mode))
+    for rect in root.findall(".//s:rect[@class='node']", NS):
+        assert float(rect.attrib["stroke-width"]) == 2.5
+    for path in root.findall(".//s:path[@class='edge']", NS):
+        assert float(path.attrib["stroke-width"]) == 2.5
+    for dot in root.findall(".//s:circle", NS):
+        assert float(dot.attrib["r"]) >= 5.0
+    transit_dots = root.findall(".//s:circle[@class='transit-dot']", NS)
+    assert all(float(d.attrib["r"]) == 6.0 for d in transit_dots)
+    settled_dots = root.findall(".//s:circle[@class='settled-dot']", NS)
+    assert all(float(d.attrib["r"]) == 6.0 for d in settled_dots)
+    late_dots = root.findall(".//s:circle[@class='late-proposal-dot']", NS)
+    assert all(float(d.attrib["r"]) == 6.0 for d in late_dots)
+    for marker in root.findall(".//s:marker", NS):
+        assert float(marker.attrib["markerWidth"]) >= 10.0
+        assert float(marker.attrib["markerHeight"]) >= 10.0

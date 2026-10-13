@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 @dataclass(frozen=True)
 class Geometry:
     width: float = 1280
-    height: float = 440
+    height: float = 520
     margin: float = 30
 
 
@@ -78,77 +78,77 @@ class Edge:
 
 def get_nodes() -> dict[str, Node]:
     return {
-        "replayer": Node("replayer", 60, 127, 160, 46),
-        "gateway": Node("gateway", 320, 126, 180, 48),
-        "PostgreSQL": Node("PostgreSQL", 320, 300, 180, 56, subtitle="final decisions"),
-        "Flink": Node("Flink", 760, 123, 220, 54, subtitle="scoring, canonicalizing"),
-        "Druid": Node("Druid", 860, 245, 140, 46),
-        "Superset": Node("Superset", 1070, 245, 150, 46),
-        "Spark batch": Node("Spark batch", 860, 332, 140, 46),
-        "Hudi on SeaweedFS": Node("Hudi on SeaweedFS", 1060, 328, 180, 54, subtitle="ledger"),
+        "replayer": Node("replayer", 60, 150, 180, 56),
+        "gateway": Node("gateway", 300, 146, 210, 64),
+        "PostgreSQL": Node("PostgreSQL", 300, 350, 210, 80, subtitle="final decisions"),
+        "Flink": Node("Flink", 770, 146, 240, 64, subtitle="scoring, canonicalizing"),
+        "Druid": Node("Druid", 860, 312, 140, 56),
+        "Superset": Node("Superset", 1060, 312, 160, 56),
+        "Spark batch": Node("Spark batch", 860, 397, 140, 56),
+        "Hudi on SeaweedFS": Node("Hudi on SeaweedFS", 1050, 393, 190, 64, subtitle="ledger"),
     }
 
 
 def get_bus() -> Bus:
     return Bus(
         "Kafka",
-        580,
-        100,
-        120,
-        308,
+        560,
+        110,
+        160,
+        360,
         topics={
-            "auth.requests": 140,
-            "auth.proposals": 170,
-            "decisions.raw": 215,
-            "decisions": 260,
-            "lifecycle": 355,
+            "auth.requests": 175,
+            "auth.proposals": 205,
+            "decisions.raw": 280,
+            "decisions": 340,
+            "lifecycle": 425,
         },
     )
 
 
 def get_edges() -> list[Edge]:
     return [
-        Edge("replayer", "gateway", 220, 150, 320, 150),
-        Edge("gateway", "Kafka", 500, 140, 580, 140, topic="auth.requests"),
-        Edge("Kafka", "Flink", 700, 140, 760, 140, topic="auth.requests"),
-        Edge("Flink", "Kafka", 760, 170, 700, 170, topic="auth.proposals"),
-        Edge("Kafka", "gateway", 580, 170, 500, 170, topic="auth.proposals"),
-        Edge("gateway", "PostgreSQL", 380, 174, 380, 300),
+        Edge("replayer", "gateway", 240, 178, 300, 178),
+        Edge("gateway", "Kafka", 510, 175, 560, 175, topic="auth.requests"),
+        Edge("Kafka", "Flink", 720, 175, 770, 175, topic="auth.requests"),
+        Edge("Flink", "Kafka", 770, 205, 720, 205, topic="auth.proposals"),
+        Edge("Kafka", "gateway", 560, 205, 510, 205, topic="auth.proposals"),
+        Edge("gateway", "PostgreSQL", 325, 210, 325, 350),
         Edge(
             "PostgreSQL",
             "Kafka",
-            460,
-            300,
-            580,
-            215,
+            450,
+            350,
+            560,
+            280,
             topic="decisions.raw",
-            path="M 460 300 L 460 221 A 6 6 0 0 1 466 215 L 580 215",
+            path="M 450 350 L 450 286 A 6 6 0 0 1 456 280 L 560 280",
         ),
         Edge(
             "Kafka",
             "Flink",
-            700,
-            215,
-            790,
-            177,
+            720,
+            280,
+            810,
+            210,
             topic="decisions.raw",
-            path="M 700 215 L 784 215 A 6 6 0 0 0 790 209 L 790 177",
+            path="M 720 280 L 804 280 A 6 6 0 0 0 810 274 L 810 210",
         ),
         Edge(
             "Flink",
             "Kafka",
-            830,
-            177,
-            700,
-            254,
+            850,
+            210,
+            720,
+            334,
             topic="decisions",
-            path="M 830 177 L 830 248 A 6 6 0 0 1 824 254 L 700 254",
+            path="M 850 210 L 850 328 A 6 6 0 0 1 844 334 L 720 334",
         ),
-        Edge("Kafka", "Druid", 700, 266, 860, 266, topic="decisions"),
-        Edge("Druid", "Superset", 1000, 268, 1070, 268),
-        Edge("PostgreSQL", "Kafka", 500, 355, 580, 355, topic="lifecycle"),
-        Edge("Kafka", "Spark batch", 700, 355, 860, 355, topic="lifecycle"),
-        Edge("Spark batch", "Hudi on SeaweedFS", 1000, 355, 1060, 355),
+        Edge("Kafka", "Druid", 720, 346, 860, 346, topic="decisions"),
+        Edge("Druid", "Superset", 1000, 346, 1060, 346),
+        Edge("PostgreSQL", "Kafka", 510, 425, 560, 425, topic="lifecycle"),
+        Edge("Kafka", "Spark batch", 720, 425, 860, 425, topic="lifecycle"),
+        Edge("Spark batch", "Hudi on SeaweedFS", 1000, 425, 1050, 425),
     ]
 
 
@@ -168,8 +168,8 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
     subtitle = "PostgreSQL holds the final decision. A scoring proposal that misses its deadline cannot change it."
 
     face, out = faces(), Outliner()
-    heading = out.run(face["title"], title, 40, 44, 22)
-    subline = out.run(face["body"], subtitle, 40, 70, 15)
+    heading = out.run(face["title"], title, 40, 48, 26)
+    subline = out.run(face["body"], subtitle, 40, 78, 18)
 
     nodes = get_nodes()
     bus = get_bus()
@@ -184,39 +184,47 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
         node_elements.append(
             f'<rect class="node" x="{node.x:g}" y="{node.y:g}" '
             f'width="{node.width:g}" height="{node.height:g}" rx="{node.rx:g}" ry="{node.ry:g}" '
-            f'fill="none" stroke="{FAINT[mode]}" stroke-width="1.5"/>'
+            f'fill="none" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
         )
-        if node.subtitle:
+        if node.name == "PostgreSQL":
+            text_cx = node.x + 35 + (node.width - 35) / 2
             node_names.append(
-                out.run(face["body"], node.name, node.cx, node.cy - 4, 15, anchor="middle")
+                out.run(face["body"], node.name, text_cx, node.cy - 6, 16, anchor="middle")
             )
             node_subtitles.append(
-                out.run(face["body"], node.subtitle, node.cx, node.cy + 15, 13, anchor="middle")
+                out.run(face["body"], node.subtitle, text_cx, node.cy + 18, 16, anchor="middle")
+            )
+        elif node.subtitle:
+            node_names.append(
+                out.run(face["body"], node.name, node.cx, node.cy - 6, 16, anchor="middle")
+            )
+            node_subtitles.append(
+                out.run(face["body"], node.subtitle, node.cx, node.cy + 18, 16, anchor="middle")
             )
         else:
             node_names.append(
-                out.run(face["body"], node.name, node.cx, node.cy + 5, 15, anchor="middle")
+                out.run(face["body"], node.name, node.cx, node.cy + 5, 16, anchor="middle")
             )
 
     # Kafka bus
     node_elements.append(
         f'<rect class="node" x="{bus.x:g}" y="{bus.y:g}" '
         f'width="{bus.width:g}" height="{bus.height:g}" rx="{bus.rx:g}" ry="{bus.ry:g}" '
-        f'fill="none" stroke="{FAINT[mode]}" stroke-width="1.5"/>'
+        f'fill="none" stroke="{FAINT[mode]}" stroke-width="2.5"/>'
     )
-    bus_label = out.run(face["body"], bus.name, bus.cx, bus.y + 24, 15, anchor="middle")
+    bus_label = out.run(face["body"], bus.name, bus.cx, bus.y + 28, 17, anchor="middle")
 
     bus_topics = []
     for topic, topic_y in bus.topics.items():
         bus_topics.append(
-            out.run(face["number"], topic, bus.cx, topic_y + 4, 12, anchor="middle")
+            out.run(face["number"], topic, bus.cx, topic_y + 5, 16, anchor="middle")
         )
 
     marker_id = f"arrow-{mode}"
     defs = (
         f'{out.defs()}'
         f'<marker id="{marker_id}" viewBox="0 0 10 10" refX="7" refY="5" '
-        f'markerWidth="6" markerHeight="6" orient="auto" markerUnits="userSpaceOnUse">'
+        f'markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">'
         f'<path d="M 1 2 L 7 5 L 1 8 z" fill="{MUTED[mode]}"/>'
         f'</marker>'
     )
@@ -224,7 +232,7 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
     edge_elements = []
     for edge in edges:
         edge_elements.append(
-            f'<path class="edge" d="{edge.path_d()}" stroke="{MUTED[mode]}" stroke-width="1.5" '
+            f'<path class="edge" d="{edge.path_d()}" stroke="{MUTED[mode]}" stroke-width="2.5" '
             f'fill="none" stroke-linecap="round" marker-end="url(#{marker_id})"/>'
         )
 
@@ -232,68 +240,68 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
 
     dots = []
 
-    # Transaction 1: Blue dots (r 4)
+    # Transaction 1: Blue dots (r 6)
     dots.append(
-        f'<circle class="transit-dot" cx="220" cy="150" r="4" fill="{BLUE[mode]}" style="animation:t1_seg1 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{BLUE[mode]}" style="animation:t1_seg1 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="500" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t1_seg2 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t1_seg2 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="700" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t1_seg3 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t1_seg3 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="760" cy="170" r="4" fill="{BLUE[mode]}" style="animation:t1_seg4 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{BLUE[mode]}" style="animation:t1_seg4 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="580" cy="170" r="4" fill="{BLUE[mode]}" style="animation:t1_seg5 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="560" cy="205" r="6" fill="{BLUE[mode]}" style="animation:t1_seg5 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="settled-dot" cx="380" cy="308" r="4" fill="{BLUE[mode]}" style="animation:t1_settle 14s linear infinite;{frozen}"/>'
+        f'<circle class="settled-dot" cx="325" cy="375" r="6" fill="{BLUE[mode]}" style="animation:t1_settle 14s linear infinite;{frozen}"/>'
     )
 
     # Transaction 2: Blue dots + Fail-closed decision settling in PostgreSQL
     dots.append(
-        f'<circle class="transit-dot" cx="220" cy="150" r="4" fill="{BLUE[mode]}" style="animation:t2_seg1 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="240" cy="178" r="6" fill="{BLUE[mode]}" style="animation:t2_seg1 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="500" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t2_seg2 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="510" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t2_seg2 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="transit-dot" cx="700" cy="140" r="4" fill="{BLUE[mode]}" style="animation:t2_seg3 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="720" cy="175" r="6" fill="{BLUE[mode]}" style="animation:t2_seg3 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="settled-dot" cx="365" cy="308" r="4" fill="{BLUE[mode]}" style="animation:t2_settle 14s linear infinite;{frozen}"/>'
+        f'<circle class="settled-dot" cx="325" cy="405" r="6" fill="{BLUE[mode]}" style="animation:t2_settle 14s linear infinite;{frozen}"/>'
     )
 
-    # Transaction 2 late proposal: EMBER dots (r 4)
+    # Transaction 2 late proposal: EMBER dots (r 6)
     dots.append(
-        f'<circle class="transit-dot" cx="760" cy="170" r="4" fill="{EMBER[mode]}" style="animation:t2_prop_seg4 14s linear infinite;{frozen}"/>'
+        f'<circle class="transit-dot" cx="770" cy="205" r="6" fill="{EMBER[mode]}" style="animation:t2_prop_seg4 14s linear infinite;{frozen}"/>'
     )
     dots.append(
-        f'<circle class="late-proposal-dot" cx="580" cy="170" r="4" fill="{EMBER[mode]}" style="animation:late_proposal_dot 14s linear infinite;{frozen}"/>'
+        f'<circle class="late-proposal-dot" cx="560" cy="205" r="6" fill="{EMBER[mode]}" style="animation:late_proposal_dot 14s linear infinite;{frozen}"/>'
     )
 
-    # Continuous fainter dots on downstream paths
+    # Continuous fainter dots on downstream paths (r 5)
     for i in range(4):
         d_offset = delay(i * 0.875, freeze_at)
         dots.append(
-            f'<circle class="faint-dot" cx="700" cy="266" r="3.5" fill="{BLUE[mode]}" style="animation:flow_dec_1 3.5s linear infinite;{d_offset}"/>'
+            f'<circle class="faint-dot" cx="720" cy="346" r="5" fill="{BLUE[mode]}" style="animation:flow_dec_1 3.5s linear infinite;{d_offset}"/>'
         )
         dots.append(
-            f'<circle class="faint-dot" cx="1000" cy="268" r="3.5" fill="{BLUE[mode]}" style="animation:flow_dec_2 3.5s linear infinite;{d_offset}"/>'
+            f'<circle class="faint-dot" cx="1000" cy="346" r="5" fill="{BLUE[mode]}" style="animation:flow_dec_2 3.5s linear infinite;{d_offset}"/>'
         )
 
         l_offset = delay(i * 0.875 + 0.4375, freeze_at)
         dots.append(
-            f'<circle class="faint-dot" cx="700" cy="355" r="3.5" fill="{BLUE[mode]}" style="animation:flow_life_1 3.5s linear infinite;{l_offset}"/>'
+            f'<circle class="faint-dot" cx="720" cy="425" r="5" fill="{BLUE[mode]}" style="animation:flow_life_1 3.5s linear infinite;{l_offset}"/>'
         )
         dots.append(
-            f'<circle class="faint-dot" cx="1000" cy="355" r="3.5" fill="{BLUE[mode]}" style="animation:flow_life_2 3.5s linear infinite;{l_offset}"/>'
+            f'<circle class="faint-dot" cx="1000" cy="425" r="5" fill="{BLUE[mode]}" style="animation:flow_life_2 3.5s linear infinite;{l_offset}"/>'
         )
 
-    # Late proposal refused label (EMBER)
-    late_label_glyphs = out.run(face["body"], "late proposal refused", 480, 192, 13, anchor="middle")
+    # Late proposal refused label (EMBER, size 16)
+    late_label_glyphs = out.run(face["body"], "late proposal refused", 435, 240, 16, anchor="middle")
     late_label_elem = (
         f'<g class="late-proposal-label" fill="{EMBER[mode]}" style="animation:late_label 14s linear infinite;{frozen}">{late_label_glyphs}</g>'
     )
@@ -313,23 +321,23 @@ def render(data: dict | None = None, mode: str = "light", freeze_at: float | Non
         ".t2-seg2{animation:t2_seg2 14s linear infinite}"
         ".t2-seg3{animation:t2_seg3 14s linear infinite}"
         ".t2-prop-seg4{animation:t2_prop_seg4 14s linear infinite}"
-        "@keyframes t1_seg1{0%{opacity:1;transform:translateX(0)}5.714%{opacity:1;transform:translateX(100px)}5.715%,100%{opacity:0;transform:translateX(100px)}}"
-        "@keyframes t1_seg2{0%,7.143%{opacity:0;transform:translateX(0)}7.144%{opacity:1;transform:translateX(0)}11.429%{opacity:1;transform:translateX(80px)}11.430%,100%{opacity:0;transform:translateX(80px)}}"
-        "@keyframes t1_seg3{0%,12.857%{opacity:0;transform:translateX(0)}12.858%{opacity:1;transform:translateX(0)}16.429%{opacity:1;transform:translateX(60px)}16.430%,100%{opacity:0;transform:translateX(60px)}}"
-        "@keyframes t1_seg4{0%,20.000%{opacity:0;transform:translateX(0)}20.001%{opacity:1;transform:translateX(0)}23.571%{opacity:1;transform:translateX(-60px)}23.572%,100%{opacity:0;transform:translateX(-60px)}}"
-        "@keyframes t1_seg5{0%,25.000%{opacity:0;transform:translateX(0)}25.001%{opacity:1;transform:translateX(0)}29.286%{opacity:1;transform:translateX(-80px)}29.287%,100%{opacity:0;transform:translateX(-80px)}}"
-        "@keyframes t1_settle{0%,30.714%{opacity:0;transform:translateY(-134px)}30.715%{opacity:1;transform:translateY(-134px)}37.143%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
-        "@keyframes t2_seg1{0%,40.000%{opacity:0;transform:translateX(0)}40.001%{opacity:1;transform:translateX(0)}45.714%{opacity:1;transform:translateX(100px)}45.715%,100%{opacity:0;transform:translateX(100px)}}"
-        "@keyframes t2_seg2{0%,47.143%{opacity:0;transform:translateX(0)}47.144%{opacity:1;transform:translateX(0)}51.429%{opacity:1;transform:translateX(80px)}51.430%,100%{opacity:0;transform:translateX(80px)}}"
-        "@keyframes t2_seg3{0%,52.857%{opacity:0;transform:translateX(0)}52.858%{opacity:1;transform:translateX(0)}56.429%{opacity:1;transform:translateX(60px)}56.430%,100%{opacity:0;transform:translateX(60px)}}"
-        "@keyframes t2_settle{0%,57.857%{opacity:0;transform:translateY(-134px)}57.858%{opacity:1;transform:translateY(-134px)}64.286%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
-        "@keyframes t2_prop_seg4{0%,60.714%{opacity:0;transform:translateX(0)}60.715%{opacity:1;transform:translateX(0)}64.286%{opacity:1;transform:translateX(-60px)}64.287%,100%{opacity:0;transform:translateX(-60px)}}"
-        "@keyframes late_proposal_dot{0%,65.714%{opacity:0;transform:translateX(0)}65.715%{opacity:1;transform:translateX(0)}70.000%{opacity:1;transform:translateX(-80px)}80.000%{opacity:1;transform:translateX(-80px)}84.286%{opacity:0;transform:translateX(-80px)}84.287%,100%{opacity:0;transform:translateX(-80px)}}"
+        "@keyframes t1_seg1{0%{opacity:1;transform:translateX(0)}5.714%{opacity:1;transform:translateX(60px)}5.715%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes t1_seg2{0%,7.143%{opacity:0;transform:translateX(0)}7.144%{opacity:1;transform:translateX(0)}11.429%{opacity:1;transform:translateX(50px)}11.430%,100%{opacity:0;transform:translateX(50px)}}"
+        "@keyframes t1_seg3{0%,12.857%{opacity:0;transform:translateX(0)}12.858%{opacity:1;transform:translateX(0)}16.429%{opacity:1;transform:translateX(50px)}16.430%,100%{opacity:0;transform:translateX(50px)}}"
+        "@keyframes t1_seg4{0%,20.000%{opacity:0;transform:translateX(0)}20.001%{opacity:1;transform:translateX(0)}23.571%{opacity:1;transform:translateX(-50px)}23.572%,100%{opacity:0;transform:translateX(-50px)}}"
+        "@keyframes t1_seg5{0%,25.000%{opacity:0;transform:translateX(0)}25.001%{opacity:1;transform:translateX(0)}29.286%{opacity:1;transform:translateX(-50px)}29.287%,100%{opacity:0;transform:translateX(-50px)}}"
+        "@keyframes t1_settle{0%,30.714%{opacity:0;transform:translateY(-165px)}30.715%{opacity:1;transform:translateY(-165px)}37.143%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
+        "@keyframes t2_seg1{0%,40.000%{opacity:0;transform:translateX(0)}40.001%{opacity:1;transform:translateX(0)}45.714%{opacity:1;transform:translateX(60px)}45.715%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes t2_seg2{0%,47.143%{opacity:0;transform:translateX(0)}47.144%{opacity:1;transform:translateX(0)}51.429%{opacity:1;transform:translateX(50px)}51.430%,100%{opacity:0;transform:translateX(50px)}}"
+        "@keyframes t2_seg3{0%,52.857%{opacity:0;transform:translateX(0)}52.858%{opacity:1;transform:translateX(0)}56.429%{opacity:1;transform:translateX(50px)}56.430%,100%{opacity:0;transform:translateX(50px)}}"
+        "@keyframes t2_settle{0%,57.857%{opacity:0;transform:translateY(-195px)}57.858%{opacity:1;transform:translateY(-195px)}64.286%{opacity:1;transform:translateY(0)}96.000%{opacity:1;transform:translateY(0)}96.001%,100%{opacity:0;transform:translateY(0)}}"
+        "@keyframes t2_prop_seg4{0%,60.714%{opacity:0;transform:translateX(0)}60.715%{opacity:1;transform:translateX(0)}64.286%{opacity:1;transform:translateX(-50px)}64.287%,100%{opacity:0;transform:translateX(-50px)}}"
+        "@keyframes late_proposal_dot{0%,65.714%{opacity:0;transform:translateX(0)}65.715%{opacity:1;transform:translateX(0)}70.000%{opacity:1;transform:translateX(-50px)}80.000%{opacity:1;transform:translateX(-50px)}84.286%{opacity:0;transform:translateX(-50px)}84.287%,100%{opacity:0;transform:translateX(-50px)}}"
         "@keyframes late_label{0%,69.999%{opacity:0}70.000%{opacity:1}80.000%{opacity:1}84.286%{opacity:0}84.287%,100%{opacity:0}}"
-        "@keyframes flow_dec_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(160px)}37.144%,100%{opacity:0;transform:translateX(160px)}}"
-        "@keyframes flow_dec_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}62.857%{opacity:0.45;transform:translateX(70px)}62.858%,100%{opacity:0;transform:translateX(70px)}}"
-        "@keyframes flow_life_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(160px)}37.144%,100%{opacity:0;transform:translateX(160px)}}"
-        "@keyframes flow_life_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}60.000%{opacity:0.45;transform:translateX(60px)}60.001%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes flow_dec_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(140px)}37.144%,100%{opacity:0;transform:translateX(140px)}}"
+        "@keyframes flow_dec_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}62.857%{opacity:0.45;transform:translateX(60px)}62.858%,100%{opacity:0;transform:translateX(60px)}}"
+        "@keyframes flow_life_1{0%{opacity:0.45;transform:translateX(0)}37.143%{opacity:0.45;transform:translateX(140px)}37.144%,100%{opacity:0;transform:translateX(140px)}}"
+        "@keyframes flow_life_2{0%,42.857%{opacity:0;transform:translateX(0)}42.858%{opacity:0.45;transform:translateX(0)}60.000%{opacity:0.45;transform:translateX(50px)}60.001%,100%{opacity:0;transform:translateX(50px)}}"
     )
 
     body = (
