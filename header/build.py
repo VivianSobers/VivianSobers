@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from figkit.color import INK, MUTED, RAMP, ramp_color
+from figkit.svg import delay, document
 from figkit.text import Face, Outliner
 
 HERE = Path(__file__).resolve().parent
@@ -129,10 +130,6 @@ def _polygon(points: tuple[tuple[float, float], ...]) -> str:
     return "M" + "L".join(f"{x:g} {y:g}" for x, y in points) + "Z"
 
 
-def _delay(seconds: float, freeze_at: float | None) -> str:
-    return f"animation-delay:{seconds - (freeze_at or 0.0):.3f}s"
-
-
 def _legend_points(x: float, y: float) -> tuple[tuple[float, float], ...]:
     w, h = 9.0, 9.0 * Geometry(n=1).aspect
     return (x, y - h), (x + w, y), (x, y + h), (x - w, y)
@@ -166,7 +163,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
                 if w >= THRESHOLD
             )
             if marks:
-                cells.append(f'<g class="c s{s}" style="{_delay(row_delay(s, i, timing), freeze_at)}">{marks}</g>')
+                cells.append(f'<g class="c s{s}" style="{delay(row_delay(s, i, timing), freeze_at)}">{marks}</g>')
         role, meaning, measure = ROLE_TEXT[head["role"]]
         ink = out.run(face["title"], role, right, 66, 22, "end")
         ink += out.run(face["body"], f"Layer {head['layer']}, head {head['head']}", right, 93, 16, "end")
@@ -175,7 +172,7 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         )
         muted += out.run(face["body"], f"{measure}: {head['score']:.2f}", right, 130 + 22 * len(meaning), 15, "end")
         labels.append(
-            f'<g class="l s{s}" style="{_delay(s * timing.scene, freeze_at)}">'
+            f'<g class="l s{s}" style="{delay(s * timing.scene, freeze_at)}">'
             f'<g fill="{INK[mode]}">{ink}</g><g fill="{MUTED[mode]}">{muted}</g></g>'
         )
 
@@ -199,23 +196,20 @@ def render(data: dict, mode: str, freeze_at: float | None = None) -> str:
         f"@keyframes on{{0%{{opacity:0}}{fade:.3f}%{{opacity:1}}{hold:.3f}%{{opacity:1}}"
         f"{hold + fade:.3f}%{{opacity:0}}100%{{opacity:0}}}}"
         f".c,.l{{opacity:0;animation:on {timing.loop:g}s ease-in-out infinite backwards}}.s{static}{{opacity:1}}"
-        + (".c,.l{animation-play-state:paused}" if freeze_at is not None else "")
-        + "@media (prefers-reduced-motion:reduce){.c,.l{animation:none}}"
     )
     sentence = data["config"]["sentence"].strip()
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {geometry.width:g} {height}" '
-        f'width="{geometry.width:g}" height="{height}" role="img" aria-labelledby="title desc">'
-        f'<title id="title">Vivian Sobers</title>'
-        f'<desc id="desc">Attention patterns from four heads of Qwen3-0.6B reading "{sentence}" twice, '
-        f"drawn as a triangle of cells above the line.</desc>"
-        f"<style>{css}</style><defs>{out.defs()}</defs>"
+    body = (
         f'<path d="{lattice}" fill="{RAMP[0] if mode == "light" else RAMP[-1]}" opacity="{LATTICE_OPACITY[mode]}"/>'
         f"<g>{''.join(cells)}</g>"
         f'<g fill="{MUTED[mode]}">{token_marks}{caption}{legend_text}</g>'
         f'<g fill="{INK[mode]}">{name}</g>'
         f"<g>{''.join(labels)}</g><g>{swatches}</g>"
-        "</svg>\n"
+    )
+    return document(
+        geometry.width, height, "Vivian Sobers",
+        f'Attention patterns from four heads of Qwen3-0.6B reading "{sentence}" twice, '
+        "drawn as a triangle of cells above the line.",
+        css, out.defs(), body, freeze_at,
     )
 
 
